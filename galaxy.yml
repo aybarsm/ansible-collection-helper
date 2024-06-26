@@ -1,0 +1,15 @@
+---
+namespace: aybarsm
+name: helper
+version: 0.0.1
+readme: README.md
+authors:
+  - Murat Aybars <hello@aybarsm.com> (https://aybarsm.com)
+description: Ansible collection that...
+license_file: LICENSE
+tags: []
+dependencies: {}
+repository: https://github.com/aybarsm/ansible-collection-helper
+documentation: https://github.com/aybarsm/ansible-collection-helper
+homepage: https://github.com/aybarsm/ansible-collection-helper
+issues: https://github.com/aybarsm/ansible-collection-helper/issues
