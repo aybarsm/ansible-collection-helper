@@ -97,14 +97,14 @@ def flatten_query(data, keyAttribute, valAttribute=None, assignChar='=', joinCha
                 result.append(f"{item[keyAttribute]}")
     return joinChar.join(result)
 
-def unique_recursive(data, attribute, recurse=None):
-    def unique_by_attr(items):
+def unique_recursive(data, attributes, recurse=None):
+    def unique_by_attr(items, attr):
         seen = set()
         result = []
         for item in items:
-            if item.get(attribute) not in seen:
+            if item.get(attr) not in seen:
                 result.append(item)
-                seen.add(item.get(attribute))
+                seen.add(item.get(attr))
         return result
 
     def get_nested_value(item, nested_key):
@@ -126,16 +126,45 @@ def unique_recursive(data, attribute, recurse=None):
             d = d[key]
         d[keys[-1]] = value
 
+    if isinstance(attributes, str):
+        attributes = [attributes]
+
     if isinstance(data, list):
-        for item in data:
-            if isinstance(item, dict) and recurse:
-                nested_value = get_nested_value(item, recurse)
-                if isinstance(nested_value, list):
-                    unique_nested_value = unique_recursive(nested_value, attribute, recurse)
-                    set_nested_value(item, recurse, unique_nested_value)
-        return unique_by_attr(data)
+        for attribute in attributes:
+            for item in data:
+                if isinstance(item, dict) and recurse:
+                    nested_value = get_nested_value(item, recurse)
+                    if isinstance(nested_value, list):
+                        unique_nested_value = unique_recursive(nested_value, attribute, recurse)
+                        set_nested_value(item, recurse, unique_nested_value)
+        return unique_by_attr(data, attribute)
     else:
         raise AnsibleFilterError("unique_recursive expects a list of dictionaries")
+
+def selectattr_defined(data, attributes, logic='and'):
+        if not isinstance(data, list):
+            raise AnsibleFilterError("selectattr_defined expects a list of dictionaries")
+
+        if isinstance(attributes, str):
+            attributes = [attributes]
+
+        if not all(isinstance(attr, str) for attr in attributes):
+            raise AnsibleFilterError("attributes should be a string or list of strings")
+
+        if logic not in ['and', 'or']:
+            raise AnsibleFilterError("logic should be either 'and' or 'or'")
+
+        result = []
+        for item in data:
+            if isinstance(item, dict):
+                if logic == 'and':
+                    if all(attr in item for attr in attributes):
+                        result.append(item)
+                elif logic == 'or':
+                    if any(attr in item for attr in attributes):
+                        result.append(item)
+
+        return result
 
 class FilterModule(object):
     def filters(self):
@@ -149,4 +178,5 @@ class FilterModule(object):
             'ensure_list': ensure_list,
             'flatten_query': flatten_query,
             'unique_recursive': unique_recursive,
+            'selectattr_defined': selectattr_defined,
         }
