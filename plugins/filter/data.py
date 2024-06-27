@@ -67,17 +67,26 @@ def data_set(data, key, value, overwrite=True):
             data = []
 
         if segments:
-            for i, inner in enumerate(data):
-                data[i] = data_set(inner, segments, value, overwrite)
+            if isinstance(data, dict):
+                keys = list(data.keys())
+                for k in keys:
+                    data[k] = data_set(data[k], segments.copy(), value, overwrite)
+            elif isinstance(data, list):
+                for i in range(len(data)):
+                    data[i] = data_set(data[i], segments.copy(), value, overwrite)
         elif overwrite:
-            for i in range(len(data)):
-                data[i] = value
+            if isinstance(data, dict):
+                for k in data:
+                    data[k] = value
+            elif isinstance(data, list):
+                for i in range(len(data)):
+                    data[i] = value
 
     elif isinstance(data, dict):
         if segments:
             if segment not in data:
                 data[segment] = {}
-            data[segment] = data_set(data[segment], segments, value, overwrite)
+            data[segment] = data_set(data[segment], segments.copy(), value, overwrite)
         elif overwrite or segment not in data:
             data[segment] = value
 
@@ -87,7 +96,7 @@ def data_set(data, key, value, overwrite=True):
             if segments:
                 if index >= len(data):
                     data.extend([{}] * (index - len(data) + 1))
-                data[index] = data_set(data[index], segments, value, overwrite)
+                data[index] = data_set(data[index], segments.copy(), value, overwrite)
             elif overwrite or index >= len(data) or data[index] is None:
                 if index >= len(data):
                     data.extend([None] * (index - len(data) + 1))
@@ -96,9 +105,44 @@ def data_set(data, key, value, overwrite=True):
     else:
         data = {}
         if segments:
-            data[segment] = data_set({}, segments, value, overwrite)
+            data[segment] = data_set({}, segments.copy(), value, overwrite)
         elif overwrite:
             data[segment] = value
+
+    return data
+
+def data_forget(data, key):
+    if isinstance(key, str):
+        segments = key.split('.')
+    else:
+        segments = key
+
+    segment = segments.pop(0)
+
+    if segment == '*' and isinstance(data, (list, dict)):
+        if segments:
+            if isinstance(data, dict):
+                for k in list(data.keys()):
+                    data_forget(data[k], segments.copy())
+            elif isinstance(data, list):
+                for i in range(len(data)):
+                    data_forget(data[i], segments.copy())
+    elif isinstance(data, dict):
+        if segments and segment in data:
+            data_forget(data[segment], segments.copy())
+        elif segment in data:
+            del data[segment]
+    elif isinstance(data, list) and segment.isdigit():
+        index = int(segment)
+        if segments and 0 <= index < len(data):
+            data_forget(data[index], segments.copy())
+        elif 0 <= index < len(data):
+            del data[index]
+    elif hasattr(data, segment):
+        if segments:
+            data_forget(getattr(data, segment), segments.copy())
+        else:
+            delattr(data, segment)
 
     return data
 
@@ -107,4 +151,5 @@ class FilterModule(object):
         return {
             'data_get': data_get,
             'data_set': data_set,
+            'data_forget': data_forget,
         }
