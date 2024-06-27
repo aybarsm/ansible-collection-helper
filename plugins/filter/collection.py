@@ -1,3 +1,4 @@
+import hashlib
 from ansible.errors import AnsibleFilterError
 
 def keys_only(data, target):
@@ -98,13 +99,22 @@ def flatten_query(data, keyAttribute, valAttribute=None, assignChar='=', joinCha
     return joinChar.join(result)
 
 def unique_recursive(data, attributes, recurse=None):
+    excluded = []
+
+    def simple_hash(content):
+        return hashlib.md5(str(content).encode()).hexdigest()
+        
     def unique_by_attr(items, attr):
         seen = set()
         result = []
         for item in items:
-            if item.get(attr) not in seen:
+            item_hash_content = str(attr) + ':|:' + str(item.get(attr))
+            item_hash = simple_hash(item_hash_content)
+            if item_hash not in seen:
                 result.append(item)
-                seen.add(item.get(attr))
+                seen.add(item_hash)
+            else:
+                excluded.append([item, attr, item_hash_content, item_hash])
         return result
 
     def get_nested_value(item, nested_key):
@@ -129,15 +139,17 @@ def unique_recursive(data, attributes, recurse=None):
     if isinstance(attributes, str):
         attributes = [attributes]
 
+    explored = []
     if isinstance(data, list):
         for attribute in attributes:
+            explored.append(attribute)
             for item in data:
                 if isinstance(item, dict) and recurse:
                     nested_value = get_nested_value(item, recurse)
                     if isinstance(nested_value, list):
                         unique_nested_value = unique_recursive(nested_value, attribute, recurse)
                         set_nested_value(item, recurse, unique_nested_value)
-        return unique_by_attr(data, attribute)
+        return [unique_by_attr(data, attribute), explored]
     else:
         raise AnsibleFilterError("unique_recursive expects a list of dictionaries")
 
