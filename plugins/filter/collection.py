@@ -366,7 +366,7 @@ def split_attr(data, srcAttr, dstAttr, searchStr, dstSideRight=True, srcRename=N
 
     return result
 
-def join_attribute(data, leftAttr, rightAttr, joinStr, dstAttr=None, overwrite=True, deleteSrcAttrs=False, skipNotEligible=True):
+def join_attr(data, leftAttr, rightAttr, joinStr, dstAttr=None, overwrite=True, deleteSrcAttrs=False, skipNotEligible=True):
     _validate_list(data)
 
     if not dstAttr:
@@ -411,5 +411,5 @@ class FilterModule(object):
             'unique_recursive': unique_recursive,
             'selectattr_defined': selectattr_defined,
             'split_attr': split_attr,
-            'join_attribute': join_attribute,
+            'join_attr': join_attr,
         }
