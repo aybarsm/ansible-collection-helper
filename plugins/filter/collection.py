@@ -209,8 +209,7 @@ def all_except(data, target):
         raise AnsibleFilterError("all_except filter expects a dictionary or a list of dictionaries")
 
 def set_default(data, key, value, recurse=None):
-    if not isinstance(data, list):
-        raise AnsibleFilterError(f"Expected a list but got {type(data)}")
+    _validate_list_of_dicts(data)
 
     def set_default_recursively(data, key, value, recurse):
         for item in data:
@@ -333,7 +332,7 @@ def selectattr_defined(data, attributes, logic='and'):
     return result
 
 def split_attr(data, srcAttr, dstAttr, searchStr, dstSideRight=True, srcRename=None, skipNotEligible=True):
-    _validate_list_of_dicts(data)
+    _validate_list(data)
 
     result = []
     for item in data:
@@ -367,6 +366,34 @@ def split_attr(data, srcAttr, dstAttr, searchStr, dstSideRight=True, srcRename=N
 
     return result
 
+def join_attribute(data, leftAttr, rightAttr, joinStr, dstAttr=None, overwrite=True, deleteSrcAttrs=False, skipNotEligible=True):
+    _validate_list(data)
+
+    if not dstAttr:
+        dstAttr = leftAttr
+
+    result = []
+    for item in data:
+        if not isinstance(item, dict):
+            if skipNotEligible:
+                result.append(item)
+                continue
+            else:
+                raise AnsibleFilterError("Each item in the list should be a dictionary")
+
+        if leftAttr in item and rightAttr in item and (dstAttr not in item or overwrite):
+            new_item = item.copy()
+            new_item[dstAttr] = f"{item[leftAttr]}{joinStr}{item[rightAttr]}"
+            if deleteSrcAttrs and dstAttr != leftAttr:
+                del new_item[leftAttr]
+            if deleteSrcAttrs and dstAttr != rightAttr:
+                del new_item[rightAttr]
+            result.append(new_item)
+        else:
+            result.append(item)
+
+    return result
+
 class FilterModule(object):
     def filters(self):
         return {
@@ -384,4 +411,5 @@ class FilterModule(object):
             'unique_recursive': unique_recursive,
             'selectattr_defined': selectattr_defined,
             'split_attr': split_attr,
+            'join_attribute': join_attribute,
         }
