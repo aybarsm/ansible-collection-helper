@@ -1,8 +1,4 @@
-import hashlib
 from ansible.errors import AnsibleFilterError
-
-def hash_md5(content):
-    return hashlib.md5(str(content).encode()).hexdigest()
 
 def data_get(data, key, default=None):
     if key is None:
