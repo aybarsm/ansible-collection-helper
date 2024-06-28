@@ -1,5 +1,15 @@
 from ansible.errors import AnsibleFilterError
 
+def _validate_list(data):
+    if not isinstance(data, list):
+        raise AnsibleFilterError("Data input should be a list")
+
+def _validate_list_of_dicts(data):
+    _validate_list(data)
+
+    if not all(isinstance(item, dict) for item in data):
+        raise AnsibleFilterError("Data input should be a list of dictionaries")
+
 def data_get(data, key, default=None):
     if key is None:
         return data
@@ -321,7 +331,42 @@ def selectattr_defined(data, attributes, logic='and'):
                     result.append(item)
 
     return result
-    
+
+def split_attr(data, srcAttr, dstAttr, searchStr, dstSideRight=True, srcRename=None, skipNotEligible=True):
+    _validate_list_of_dicts(data)
+
+    result = []
+    for item in data:
+        if not isinstance(item, dict):
+            if skipNotEligible:
+                result.append(item)
+                continue
+            else:
+                raise AnsibleFilterError("Each item in the list should be a dictionary")
+        
+        if srcAttr in item and searchStr in item[srcAttr]:
+            left, right = item[srcAttr].split(searchStr, 1)
+            new_item = item.copy()
+            if dstSideRight:
+                new_item[dstAttr] = right
+                if srcRename:
+                    new_item[srcRename] = left
+                    del new_item[srcAttr]
+                else:
+                    new_item[srcAttr] = left
+            else:
+                new_item[dstAttr] = left
+                if srcRename:
+                    new_item[srcRename] = right
+                    del new_item[srcAttr]
+                else:
+                    new_item[srcAttr] = right
+            result.append(new_item)
+        else:
+            result.append(item)
+
+    return result
+
 class FilterModule(object):
     def filters(self):
         return {
@@ -338,4 +383,5 @@ class FilterModule(object):
             'flatten_query': flatten_query,
             'unique_recursive': unique_recursive,
             'selectattr_defined': selectattr_defined,
+            'split_attr': split_attr,
         }
