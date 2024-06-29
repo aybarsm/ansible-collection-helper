@@ -2,15 +2,6 @@ from jinja2.filters import pass_environment
 from ansible.errors import AnsibleFilterError
 from ..tools import Tools
 
-def _set_attribute_value(data, attribute, value, overwrite=False, deleteWhenNone=True):
-    if not overwrite and attribute in data:
-        return data
-    if value is None and deleteWhenNone:
-        data.pop(attribute)
-    else:
-        data[attribute] = value
-    return data
-
 # Example config:
 # - attribute: state
 #     value: absent
@@ -21,7 +12,7 @@ def _set_attribute_value(data, attribute, value, overwrite=False, deleteWhenNone
 #     logic: and
 
 @pass_environment
-def setattr_config(environment, data, configs):
+def setattr_conditional(environment, data, configs):
     for cnf in configs:
         if not ('attribute' in cnf and 'value' in cnf):
             raise AnsibleFilterError("Configuration should have 'attribute' and 'value' keys")
@@ -37,7 +28,7 @@ def setattr_config(environment, data, configs):
         cnf = Tools.merge_dicts({'when': [], 'logic': 'and', 'overwrite': False, 'deleteWhenNone': True}, cnf)
         
         if not cnf['when']:
-            data = _set_attribute_value(data, cnf['attribute'], cnf['value'], cnf['overwrite'], cnf['deleteWhenNone'])
+            data = Tools.set_attr_val(data, cnf['attribute'], cnf['value'], cnf['overwrite'], cnf['deleteWhenNone'])
             continue
 
         conditionResults = []
@@ -49,14 +40,14 @@ def setattr_config(environment, data, configs):
                 break
             
         if (cnf['logic'] == 'or' and any(conditionResults)) or (cnf['logic'] == 'and' and all(conditionResults)):
-            data = _set_attribute_value(data, cnf['attribute'], cnf['value'], cnf['overwrite'], cnf['deleteWhenNone'])
+            data = Tools.set_attr_val(data, cnf['attribute'], cnf['value'], cnf['overwrite'], cnf['deleteWhenNone'])
         elif 'else' in cnf:
-            data = _set_attribute_value(data, cnf['attribute'], cnf['else'], cnf['overwrite'], cnf['deleteWhenNone'])
+            data = Tools.set_attr_val(data, cnf['attribute'], cnf['else'], cnf['overwrite'], cnf['deleteWhenNone'])
     
     return data
         
 class FilterModule(object):
     def filters(self):
         return {
-            'setattr_config': setattr_config,
+            'setattr_conditional': setattr_conditional,
         }

@@ -23,6 +23,7 @@ class Tools:
     def generate_unique_salt(seperator="|", ts_format="%Y-%m-%dT%H:%M:%S.%fZ"):
         return str(Tools.timestamp_iso(format=ts_format) + seperator + Tools.uuid_4())
     
+    @staticmethod
     def merge_dicts(baseDict, *args):
         newDict = baseDict.copy()
 
@@ -31,6 +32,7 @@ class Tools:
         
         return newDict
     
+    @staticmethod
     def jinja_test(environment, data, condition):
         if len(condition) < 2:
             raise AnsibleFilterError("Condition should have at least 2 elements")
@@ -52,3 +54,13 @@ class Tools:
             return environment.tests[test](data[attribute])
         else:
             return environment.tests[test](value, data[attribute])
+    
+    @staticmethod
+    def set_attr_val(data, attribute, value, overwrite=False, deleteWhenNone=True):
+        if not overwrite and attribute in data:
+            return data
+        if value is None and deleteWhenNone:
+            data.pop(attribute)
+        else:
+            data[attribute] = value
+        return data
