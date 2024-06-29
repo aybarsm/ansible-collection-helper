@@ -3,8 +3,17 @@ from ansible.errors import AnsibleFilterError
 from ..tools import Tools
 from .data import data_get, data_set
 
+def _setattr(data, attribute, value, overwrite=False, deleteWhenNone=True):
+    if not overwrite and attribute in data:
+        return data
+    if value is None and deleteWhenNone:
+        data.pop(attribute, None)
+    else:
+        data[attribute] = value
+    return data
+
 @pass_environment
-def setattr(environment, data, attributes, values, when=[], logic='and', overwrite=False):
+def setattr(environment, data, attributes, values, when=[], logic='and', overwrite=False, deleteWhenNone=True):
     if not isinstance(attributes, (str, list)):
         raise AnsibleFilterError("attributes should be a string or list")
     elif not isinstance(values, (str, list)):
@@ -24,26 +33,20 @@ def setattr(environment, data, attributes, values, when=[], logic='and', overwri
         raise AnsibleFilterError("attributes and values should have the same length")
 
     for attrIndex, attr in enumerate(attributes):
-        if not overwrite and attr in data:
-            continue
         if not when:
-            data[attr] = values[attrIndex]
+            data = _setattr(data, attr, values[attrIndex], overwrite, deleteWhenNone)
             continue
         
         conditionResults = []
         for condition in when:
             testResult = Tools.jinja_test(environment, data, condition)
+            conditionResults.append(testResult)
 
-            if logic == 'or' and testResult:
-                data[attr] = values[attrIndex]
+            if (logic == 'or' and testResult) or (logic == 'and' and not testResult):
                 break
-            elif logic == 'and' and not testResult:
-                break
-            else:
-                conditionResults.append(testResult)
             
-        if logic == 'and' and all(conditionResults):
-            data[attr] = values[attrIndex]  
+        if (logic == 'or' and any(conditionResults)) or (logic == 'and' and all(conditionResults)):
+            data = _setattr(data, attr, values[attrIndex], overwrite, deleteWhenNone)
         
     return data
 
