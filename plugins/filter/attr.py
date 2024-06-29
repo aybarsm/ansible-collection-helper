@@ -11,6 +11,15 @@ def _set_attribute_value(data, attribute, value, overwrite=False, deleteWhenNone
         data[attribute] = value
     return data
 
+# Example config:
+# - attribute: state
+#     value: absent
+#     else: present
+#     when:
+#         - ['autoremove', 'defined']
+#         - ['autoremove', 'true']
+#     logic: and
+
 @pass_environment
 def setattr_config(environment, data, configs):
     for cnf in configs:
