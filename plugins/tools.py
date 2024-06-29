@@ -64,3 +64,25 @@ class Tools:
         else:
             data[attribute] = value
         return data
+    
+    @staticmethod
+    def set_attr_conditional(environment, data, config):            
+        config = Tools.merge_dicts({'when': [], 'logic': 'and', 'overwrite': False, 'deleteWhenNone': True}, config)
+        
+        if not config['when']:
+            return Tools.set_attr_val(data, config['attribute'], config['value'], config['overwrite'], config['deleteWhenNone'])
+            
+        conditionResults = []
+        for condition in config['when']:
+            testResult = Tools.jinja_test(environment, data, condition)
+            conditionResults.append(testResult)
+
+            if (config['logic'] == 'or' and testResult) or (config['logic'] == 'and' and not testResult):
+                break
+            
+        if (config['logic'] == 'or' and any(conditionResults)) or (config['logic'] == 'and' and all(conditionResults)):
+            return Tools.set_attr_val(data, config['attribute'], config['value'], config['overwrite'], config['deleteWhenNone'])
+        elif 'else' in config:
+            return Tools.set_attr_val(data, config['attribute'], config['else'], config['overwrite'], config['deleteWhenNone'])
+    
+        return data

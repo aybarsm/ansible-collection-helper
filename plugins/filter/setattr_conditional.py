@@ -24,26 +24,9 @@ def setattr_conditional(environment, data, configs):
             raise AnsibleFilterError("overwrite should be boolean")
         elif 'deleteWhenNone' in cnf and not isinstance(cnf['deleteWhenNone'], bool):
             raise AnsibleFilterError("deleteWhenNone should be boolean")
-        
-        cnf = Tools.merge_dicts({'when': [], 'logic': 'and', 'overwrite': False, 'deleteWhenNone': True}, cnf)
-        
-        if not cnf['when']:
-            data = Tools.set_attr_val(data, cnf['attribute'], cnf['value'], cnf['overwrite'], cnf['deleteWhenNone'])
-            continue
-
-        conditionResults = []
-        for condition in cnf['when']:
-            testResult = Tools.jinja_test(environment, data, condition)
-            conditionResults.append(testResult)
-
-            if (cnf['logic'] == 'or' and testResult) or (cnf['logic'] == 'and' and not testResult):
-                break
-            
-        if (cnf['logic'] == 'or' and any(conditionResults)) or (cnf['logic'] == 'and' and all(conditionResults)):
-            data = Tools.set_attr_val(data, cnf['attribute'], cnf['value'], cnf['overwrite'], cnf['deleteWhenNone'])
-        elif 'else' in cnf:
-            data = Tools.set_attr_val(data, cnf['attribute'], cnf['else'], cnf['overwrite'], cnf['deleteWhenNone'])
     
+        data = Tools.set_attr_conditional(environment, data, cnf)
+
     return data
         
 class FilterModule(object):
