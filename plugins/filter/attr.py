@@ -1,20 +1,17 @@
-import pickle
-import json
-import base64
-from jinja2.filters import pass_context, pass_environment, make_attrgetter, async_select_or_reject
+from jinja2.filters import pass_environment
 from ansible.errors import AnsibleFilterError
-from ansible.template import Templar
 from ..tools import Tools
 from .data import data_get, data_set
 
-@pass_environment
-def setattr(environment, data, attributes, values, conditions=[], logic='and', strict=False):
+def setattr(data, attributes, values, when=[], logic='and', strict=False):
     if not isinstance(attributes, (str, list)):
         raise AnsibleFilterError("attributes should be a string or list")
     elif not isinstance(values, (str, list)):
         raise AnsibleFilterError("values should be a string or list")
-    elif not isinstance(conditions, list):
+    elif not isinstance(when, list):
         raise AnsibleFilterError("conditions should be a list")
+    elif not logic in ['and', 'or']:
+        raise AnsibleFilterError("logic should be 'and' or 'or'")
 
     if isinstance(attributes, str):
         attributes = [attributes]
@@ -24,49 +21,75 @@ def setattr(environment, data, attributes, values, conditions=[], logic='and', s
 
     if len(attributes) != len(values):
         raise AnsibleFilterError("attributes and values should have the same length")
+    
+    defaultSalt = Tools.generate_unique_salt()
+    result = []
 
     for attrIndex, attr in enumerate(attributes):
-        if attr not in data:
+        result.append({'attr': attr, 'value': data_get(data, attr)})
+        if data_get(data, attr, defaultSalt) == defaultSalt:
             if strict:
-                raise AnsibleFilterError(f"{attr} is not in the data")
+                raise AnsibleFilterError(f"{attr} is not in one of the items in data")
             else:
+                result.append(f"{attr} skipped stage 1")
                 continue
-            
-        data = data_set(data, attr, values[attrIndex])
-    
-    return data
+        
+        if when:
+            for condition in when:
+                if 2 not in condition:
+                    condition[2] = None
+                if Tools.jinja_test(data, attr, condition[0], condition[1], condition[2]):
+                    data_set(data, attr, values[attrIndex])
 
-def to_md5(data):
-    if not isinstance(data, str):
-        raise AnsibleFilterError("data should be a string")
-    
-    return Tools.hash_md5(data)
-
-# @pass_context
-# async def make_jinja_getter(context, value, *args, **kwargs):
-#     func = async_select_or_reject(context, value, args, kwargs, lambda x: x, False)
-#     return func()
+    return [data, result]
 
 @pass_environment
-def make_jinja_getter(environment, value, attribute):
-    func = make_attrgetter(environment, attribute)
-    return func()
+def get_filter(environment, data, filterName):
+    return environment.filters[filterName]
 
-@pass_context
-def obj_serialize(context):
-    return context
-    # pickled_obj = pickle.dumps(Templar)
-    # base64_obj = base64.b64encode(pickled_obj).decode('utf-8')
-    # return json.dumps({'obj': base64_obj})
-    # return json.dumps(environment.filters.__dict__)
-    # return json.dumps(make_attrgetter.__dict__)
-    # return AnsibleEnvironment.filters
+# def setattr(data, attributes, values, when=[], logic='and', strict=False):
+#     if not isinstance(attributes, (str, list)):
+#         raise AnsibleFilterError("attributes should be a string or list")
+#     elif not isinstance(values, (str, list)):
+#         raise AnsibleFilterError("values should be a string or list")
+#     elif not isinstance(when, list):
+#         raise AnsibleFilterError("conditions should be a list")
+#     elif not logic in ['and', 'or']:
+#         raise AnsibleFilterError("logic should be 'and' or 'or'")
+
+#     if isinstance(attributes, str):
+#         attributes = [attributes]
+    
+#     if isinstance(values, str):
+#         values = [values]
+
+#     if len(attributes) != len(values):
+#         raise AnsibleFilterError("attributes and values should have the same length")
+    
+#     defaultSalt = Tools.generate_unique_salt()
+#     result = []
+
+#     for item in data:
+#         for attrIndex, attr in enumerate(attributes):
+#             if data_get(item, attr, defaultSalt) == defaultSalt:
+#                 if strict:
+#                     raise AnsibleFilterError(f"{attr} is not in one of the items in data")
+#                 else:
+#                     result.append('skipped stage 1')
+#                     continue
+            
+#             if when:
+#                 for condition in when:
+#                     if 2 not in condition:
+#                         condition[2] = None
+#                     if Tools.jinja_test(item, attr, condition[0], condition[1], condition[2]):
+#                         data_set(item, attr, values[attrIndex])
+
+#     return [data, result]
 
 class FilterModule(object):
     def filters(self):
         return {
             'setattr': setattr,
-            'to_md5': to_md5,
-            'make_jinja_getter': make_jinja_getter,
-            'obj_serialize': obj_serialize,
+            'get_filter': get_filter,
         }
