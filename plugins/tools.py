@@ -1,5 +1,4 @@
 from ansible.errors import AnsibleFilterError
-from .filter.data import data_get
 import hashlib
 import uuid
 import datetime
@@ -24,7 +23,14 @@ class Tools:
     def generate_unique_salt(seperator="|", ts_format="%Y-%m-%dT%H:%M:%S.%fZ"):
         return str(Tools.timestamp_iso(format=ts_format) + seperator + Tools.uuid_4())
     
-    @staticmethod
+    def merge_dicts(baseDict, *args):
+        newDict = baseDict.copy()
+
+        for arg in args:
+            newDict.update(arg)
+        
+        return newDict
+    
     def jinja_test(environment, data, condition):
         if len(condition) < 2:
             raise AnsibleFilterError("Condition should have at least 2 elements")

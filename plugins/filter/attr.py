@@ -1,57 +1,53 @@
 from jinja2.filters import pass_environment
 from ansible.errors import AnsibleFilterError
 from ..tools import Tools
-from .data import data_get, data_set
 
-def _setattr(data, attribute, value, overwrite=False, deleteWhenNone=True):
+def _set_attribute_value(data, attribute, value, overwrite=False, deleteWhenNone=True):
     if not overwrite and attribute in data:
         return data
     if value is None and deleteWhenNone:
-        data.pop(attribute, None)
+        data.pop(attribute)
     else:
         data[attribute] = value
     return data
 
 @pass_environment
-def setattr(environment, data, attributes, values, when=[], logic='and', overwrite=False, deleteWhenNone=True):
-    if not isinstance(attributes, (str, list)):
-        raise AnsibleFilterError("attributes should be a string or list")
-    elif not isinstance(values, (str, list)):
-        raise AnsibleFilterError("values should be a string or list")
-    elif not isinstance(when, list) or (when and not all(isinstance(item, list) and len(item) >=2 for item in when)):
-        raise AnsibleFilterError("when conditions should be list of lists with at least 2 elements")
-    elif not logic in ['and', 'or']:
-        raise AnsibleFilterError("logic should be 'and' or 'or'")
-
-    if isinstance(attributes, str):
-        attributes = [attributes]
-    
-    if isinstance(values, str):
-        values = [values]
-
-    if len(attributes) != len(values):
-        raise AnsibleFilterError("attributes and values should have the same length")
-
-    for attrIndex, attr in enumerate(attributes):
-        if not when:
-            data = _setattr(data, attr, values[attrIndex], overwrite, deleteWhenNone)
-            continue
+def setattr_config(environment, data, configs):
+    for cnf in configs:
+        if not ('attribute' in cnf and 'value' in cnf):
+            raise AnsibleFilterError("Configuration should have 'attribute' and 'value' keys")
+        elif 'when' in cnf and not isinstance(cnf['when'], list) and not all(isinstance(item, list) and len(item) >=2 for item in cnf['when']):
+            raise AnsibleFilterError("when conditions should be list of lists with at least 2 elements")
+        elif 'logic' in cnf and not cnf['logic'] in ['and', 'or']:
+            raise AnsibleFilterError("logic should be 'and' or 'or'")
+        elif 'overwrite' in cnf and not isinstance(cnf['overwrite'], bool):
+            raise AnsibleFilterError("overwrite should be boolean")
+        elif 'deleteWhenNone' in cnf and not isinstance(cnf['deleteWhenNone'], bool):
+            raise AnsibleFilterError("deleteWhenNone should be boolean")
         
+        cnf = Tools.merge_dicts({'when': [], 'logic': 'and', 'overwrite': False, 'deleteWhenNone': True}, cnf)
+        
+        if not cnf['when']:
+            data = _set_attribute_value(data, cnf['attribute'], cnf['value'], cnf['overwrite'], cnf['deleteWhenNone'])
+            continue
+
         conditionResults = []
-        for condition in when:
+        for condition in cnf['when']:
             testResult = Tools.jinja_test(environment, data, condition)
             conditionResults.append(testResult)
 
-            if (logic == 'or' and testResult) or (logic == 'and' and not testResult):
+            if (cnf['logic'] == 'or' and testResult) or (cnf['logic'] == 'and' and not testResult):
                 break
             
-        if (logic == 'or' and any(conditionResults)) or (logic == 'and' and all(conditionResults)):
-            data = _setattr(data, attr, values[attrIndex], overwrite, deleteWhenNone)
-        
+        if (cnf['logic'] == 'or' and any(conditionResults)) or (cnf['logic'] == 'and' and all(conditionResults)):
+            data = _set_attribute_value(data, cnf['attribute'], cnf['value'], cnf['overwrite'], cnf['deleteWhenNone'])
+        elif 'else' in cnf:
+            data = _set_attribute_value(data, cnf['attribute'], cnf['else'], cnf['overwrite'], cnf['deleteWhenNone'])
+    
     return data
-
+        
 class FilterModule(object):
     def filters(self):
         return {
-            'setattr': setattr,
+            'setattr_config': setattr_config,
         }
