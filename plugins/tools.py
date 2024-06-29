@@ -1,4 +1,3 @@
-from jinja2.filters import pass_environment
 from ansible.errors import AnsibleFilterError
 from .filter.data import data_get
 import hashlib
@@ -26,23 +25,24 @@ class Tools:
         return str(Tools.timestamp_iso(format=ts_format) + seperator + Tools.uuid_4())
     
     @staticmethod
-    @pass_environment
-    def jinja_test(environment, data, attribute, condition, value=None, undefinedValue=None):
+    def jinja_test(environment, data, condition):
+        if len(condition) < 2:
+            raise AnsibleFilterError("Condition should have at least 2 elements")
+        
+        test = condition[1]
         availableTests = list(environment.tests.keys())
 
-        if condition not in availableTests:
-            raise AnsibleFilterError(f"{condition} is not a valid Jinja test. Available Tests: {', '.join.availableTests}")
+        if test not in availableTests:
+            raise AnsibleFilterError(f"{test} is not a valid Jinja test. Available Tests: {', '.join.availableTests}")
         
-        if undefinedValue is None:
-            undefinedValue = Tools.generate_unique_salt()
+        attribute = condition[0]
+        value = condition[2] if len(condition) >= 3 else None
 
-        item = data_get(data, attribute, undefinedValue)
-        
-        if condition == 'defined':
-            return item != undefinedValue
-        elif condition == 'undefined':
-            return item == undefinedValue
+        if test == 'defined':
+            return attribute in data
+        elif test == 'undefined':
+            return attribute not in data
         elif value is None:
-            return environment.tests[condition](item)
+            return environment.tests[test](data[attribute])
         else:
-            return environment.tests[condition](item, value)
+            return environment.tests[test](value, data[attribute])
