@@ -63,7 +63,7 @@ def select_or_reject_attr(data, configs, reject=False):
 
     result = []
 
-    for itemIndex, item in enumerate(data):
+    for item in data:
         for cnf in configs:
             conditionStatus = check_condition(item, cnf['when'], cnf['logic'])
             
@@ -102,4 +102,6 @@ class FilterModule(object):
     def filters(self):
         return {
             'setattr': setattr,
+            'selectattr': selectattr,
+            'rejectattr': rejectattr,
         }
