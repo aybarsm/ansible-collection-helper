@@ -1,6 +1,6 @@
 from jinja2.filters import pass_environment
 from ansible.errors import AnsibleFilterError
-from ..tools import Tools
+from ..common.tools import Tools
 
 # Example config:
 # - attribute: state
