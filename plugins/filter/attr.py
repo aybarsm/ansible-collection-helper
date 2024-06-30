@@ -28,13 +28,15 @@ class Attr:
         self.configs = configs
         self.cnf_defaults = cnf_defaults
         self.jinja = JinjaEnv(jinja_env)
-        self.result = []
+        
         
         self.validate_common()
         if action == 'set':
             self.validate_set()
+            self.result = data.copy()
         elif action in ['select', 'reject']:
             self.validate_select_or_reject()
+            self.result = []
 
         self.prep_configs()
 
@@ -68,10 +70,10 @@ class Attr:
             raise AnsibleFilterError("configuration should be a dictionary")
         elif not 'when' in self.configs:
             raise AnsibleFilterError("configuration should have 'when' key")
-        elif not self.configs['logic'] in ['and', 'or']:
-            raise AnsibleFilterError("logic should be 'and' or 'or'")
         elif not isinstance(self.configs['when'], list) or (not all(isinstance(condition, list) and len(condition) >=2 for condition in self.configs['when'])):
             raise AnsibleFilterError("when conditions should be list of lists with at least 2 elements")
+        elif 'logic' in self.configs and not self.configs['logic'] in ['and', 'or']:
+            raise AnsibleFilterError("logic should be 'and' or 'or'")
     
     def check_condition(self, dict_data, when, logic):
         conditionResults = []
@@ -86,7 +88,7 @@ class Attr:
     
     def result_select_or_reject(self, item, cnf):
         whenResult = self.check_condition(item, cnf['when'], cnf['logic'])
-
+        # self.result.append({'item': item, 'whenResult': whenResult})
         if (self.action == 'select' and whenResult) or (self.action == 'reject' and not whenResult):
             self.result.append(item)
 
@@ -94,15 +96,13 @@ class Attr:
         whenResult = True if not cnf['when'] else self.check_condition(item, cnf['when'], cnf['logic'])
         finalValue = cnf['else'] if 'else' in cnf and not whenResult else (cnf['value'] if whenResult else item[cnf['attribute']])
 
-        item = Dict.set_val(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
-
-        self.result.append(item)
+        return Dict.set_val(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
     
     def run(self):
-        for item in self.data:
+        for itemIndex, item in enumerate(self.data):
             for cnf in self.configs:
                 if self.action == 'set':
-                    self.result_set(item, cnf)
+                    self.result[itemIndex] = self.result_set(item, cnf)
                 elif self.action in ['select', 'reject']:
                     self.result_select_or_reject(item, cnf)
         
@@ -125,12 +125,12 @@ def setattr(environment, data, configs):
     return attr.run()
 
 @pass_environment
-def selectattr(environment, data, configs):
-    return select_or_reject_attr(environment, data, configs)
+def selectattr(environment, data, config):
+    return select_or_reject_attr(environment, data, config)
 
 @pass_environment
-def rejectattr(environment, data, configs):
-    return select_or_reject_attr(environment, data, configs, True)
+def rejectattr(environment, data, config):
+    return select_or_reject_attr(environment, data, config, True)
 
         
 class FilterModule(object):
