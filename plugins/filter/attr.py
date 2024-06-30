@@ -29,7 +29,6 @@ class Attr:
         self.cnf_defaults = cnf_defaults
         self.jinja = JinjaEnv(jinja_env)
         
-        
         self.validate_common()
         if action == 'set':
             self.validate_set()
@@ -88,7 +87,7 @@ class Attr:
     
     def result_select_or_reject(self, item, cnf):
         whenResult = self.check_condition(item, cnf['when'], cnf['logic'])
-        # self.result.append({'item': item, 'whenResult': whenResult})
+        
         if (self.action == 'select' and whenResult) or (self.action == 'reject' and not whenResult):
             self.result.append(item)
 
@@ -132,7 +131,6 @@ def selectattr(environment, data, config):
 def rejectattr(environment, data, config):
     return select_or_reject_attr(environment, data, config, True)
 
-        
 class FilterModule(object):
     def filters(self):
         return {
