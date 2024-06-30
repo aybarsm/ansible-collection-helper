@@ -7,7 +7,7 @@ class JinjaEnv:
     def get_env(self):
         return self.jinja_env
 
-    def run_test(self, data, condition):
+    def test_attr(self, data, condition):
         if len(condition) < 2:
             raise AnsibleFilterError("Condition should have at least 2 elements")
 

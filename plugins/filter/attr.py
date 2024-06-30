@@ -2,14 +2,30 @@ from ansible.errors import AnsibleFilterError
 from ..common.tools import Dict, JinjaEnv
 from jinja2.filters import pass_environment
 
+# Example config:
+# - attribute: state (required for setattr)
+#   value: absent (required for setattr)
+#   else: present (optional for setattr)
+#   when: (required for selectattr && rejectattr | optional for setattr)
+#     - ['autoremove', 'defined']
+#     - ['autoremove', 'true']
+#   logic: and (optional for setattr && selectattr && rejectattr | default is 'and')
+#   overwrite: false (optional for setattr | default is False)
+#   deleteWhenNone: false (optional for setattr | default is False)
+# (If the value is set to be None either with 'value' or 'else' key, the attribute will be deleted if deleteWhenNone is True)
+
 class Attr:
-    def __init__(self, data, configs, jinja_env, required=[], defaults_head={}, defaults_tail={}):
+    def __init__(self, action, data, configs, jinja_env, required=[], defaults_head={}, defaults_tail={}):
+        self.action = action
         self.data = data
         self.configs = configs
         self.required = required
         self.defaults_head = defaults_head
         self.defaults_tail = defaults_tail
-        self.jinja_env = JinjaEnv(jinja_env)
+        self.jinja = JinjaEnv(jinja_env)
+        self.result = []
+        self.prep_configs()
+        self.common_validation()
 
     def prep_configs(self):
         self.configs = list(map(lambda x: Dict.merge(self.defaults_head, x, self.defaults_tail), self.configs))
@@ -31,94 +47,61 @@ class Attr:
             raise AnsibleFilterError("overwrite should be boolean")
         elif not all(isinstance(cnf['deleteWhenNone'], bool) for cnf in self.configs):
             raise AnsibleFilterError("deleteWhenNone should be boolean")
-
-# Example config:
-# - attribute: state (required for setattr && selectattr && rejectattr)
-#   value: absent (required for setattr)
-#   else: present (optional for setattr)
-#   when: (required for selectattr && rejectattr | optional for setattr)
-#     - ['autoremove', 'defined']
-#     - ['autoremove', 'true']
-#   logic: and (optional for setattr && selectattr && rejectattr | default is 'and')
-#   overwrite: false (optional for setattr | default is False)
-#   deleteWhenNone: false (optional for setattr | default is False)
-# (If the value is set to be None either with 'value' or 'else' key, the attribute will be deleted if deleteWhenNone is True)
-
-def _common_validation(data, configs, required=[]):
-    if not (isinstance(data, list) or all(isinstance(item, dict) for item in data)):
-        raise AnsibleFilterError("Data should be a list of dictionaries")
-    elif not isinstance(configs, list) or not all(isinstance(item, dict) for item in configs):
-        raise AnsibleFilterError("Configs should be a list of dictionaries")
-    elif not all(len(list(cnf.keys() & set(required))) == len(required) for cnf in configs):
-        raise AnsibleFilterError(f"Configuration should have {', '.join(required)} keys")
-    elif 'when' in required and not all('when' in cnf for cnf in configs):
-        raise AnsibleFilterError("when key is required in all configurations")
-    elif 'when' in required and not all(isinstance(cnf['when'], list) and all(isinstance(item, list) and len(item) >=2 for item in cnf['when']) for cnf in configs):
-        raise AnsibleFilterError("when conditions should be list of lists with at least 2 elements")
-    elif not all(cnf['logic'] in ['and', 'or'] for cnf in configs):
-        raise AnsibleFilterError("logic should be 'and' or 'or'")
-    elif not all(isinstance(cnf['overwrite'], bool) for cnf in configs):
-        raise AnsibleFilterError("overwrite should be boolean")
-    elif not all(isinstance(cnf['deleteWhenNone'], bool) for cnf in configs):
-        raise AnsibleFilterError("deleteWhenNone should be boolean")
     
-def _prep_configs(configs, defaults_head={}, defaults_tail={}):
-    return list(map(lambda x: Dict.merge(defaults_head, x, defaults_tail), configs))
+    def check_condition(self, dict_data, when, logic):
+        conditionResults = []
+        for condition in when:
+            testResult = self.jinja.test_attr(dict_data, condition)
+            conditionResults.append(testResult)
 
-def check_condition(dict_data, when, logic):
-    conditionResults = []
-    for condition in when:
-        testResult = Tools.jinja_test(dict_data, condition)
-        conditionResults.append(testResult)
+            if (logic == 'or' and testResult) or (logic == 'and' and not testResult):
+                break
+            
+        return (logic == 'or' and any(conditionResults)) or (logic == 'and' and all(conditionResults))
+    
+    def run(self):
+        for item in self.data:
+            for cnf in self.configs:
+                if 'when' in cnf:
+                    whenResult = self.check_condition(item, cnf['when'], cnf['logic'])
+                
+                if (self.action == 'select' and whenResult) or (self.action == 'reject' and not whenResult):
+                    self.result.append(item)
+                elif self.action == 'set':
+                    if 'when' in cnf:
+                        finalValue = cnf['value'] if whenResult else cnf['else']
+                        item = Dict.set_val(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
 
-        if (logic == 'or' and testResult) or (logic == 'and' and not testResult):
-            break
+                    self.result.append(item)
         
-    return (logic == 'or' and any(conditionResults)) or (logic == 'and' and all(conditionResults))
-
-def select_or_reject_attr(data, configs, reject=False):
+        return self.result
+    
+def select_or_reject_attr(environment,data, configs, reject=False):
+    cnf_required = ['when']
     cnf_defaults_head = {'logic': 'and'}
     cnf_defaults_tail = {'overwrite': False, 'deleteWhenNone': False}
-    configs = _prep_configs(configs, cnf_defaults_head, cnf_defaults_tail)
     
-    _common_validation(data, configs, ['attribute', 'when'])
+    action = 'select' if not reject else 'reject'
+    attr = Attr(action, data, configs, environment, cnf_required, cnf_defaults_head, cnf_defaults_tail)
 
-    result = []
-
-    for item in data:
-        for cnf in configs:
-            conditionStatus = check_condition(item, cnf['when'], cnf['logic'])
-            
-            if conditionStatus and not reject:
-                result.append(item)
-
-    return result
+    return attr.run()
 
 @pass_environment      
 def setattr(environment, data, configs):
-    cnf_defaults_head = {'logic': 'and', 'overwrite': False, 'deleteWhenNone': False}
-    configs = _prep_configs(configs, cnf_defaults_head)
+    cnf_required = ['attribute', 'value']
+    cnf_defaults_head = {'logic': 'and', 'when':[], 'overwrite': False, 'deleteWhenNone': False}
+    
+    attr = Attr('set', data, configs, environment, cnf_required, cnf_defaults_head)
 
-    _common_validation(data, configs, ['attribute', 'value'])
+    return attr.run()
 
-    for itemIndex, item in enumerate(data):
-        for cnf in configs:
-            conditionStatus = check_condition(item, cnf['when'], cnf['logic'])
-            
-            if not conditionStatus and 'else' in cnf:
-                continue
-            
-            finalValue = cnf['value'] if conditionStatus else cnf['else']
-            data[itemIndex] = Attr.set_val(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
+@pass_environment
+def selectattr(environment, data, configs):
+    return select_or_reject_attr(environment, data, configs)
 
-    return data
-
-
-def selectattr(data, configs):
-    return select_or_reject_attr(data, configs)
-
-def rejectattr(data, configs):
-    return select_or_reject_attr(data, configs, True)
+@pass_environment
+def rejectattr(environment, data, configs):
+    return select_or_reject_attr(environment, data, configs, True)
 
         
 class FilterModule(object):
