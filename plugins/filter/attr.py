@@ -1,5 +1,36 @@
 from ansible.errors import AnsibleFilterError
-from ..common.tools import Tools
+from ..common.tools import Dict, JinjaEnv
+from jinja2.filters import pass_environment
+
+class Attr:
+    def __init__(self, data, configs, jinja_env, required=[], defaults_head={}, defaults_tail={}):
+        self.data = data
+        self.configs = configs
+        self.required = required
+        self.defaults_head = defaults_head
+        self.defaults_tail = defaults_tail
+        self.jinja_env = JinjaEnv(jinja_env)
+
+    def prep_configs(self):
+        self.configs = list(map(lambda x: Dict.merge(self.defaults_head, x, self.defaults_tail), self.configs))
+    
+    def common_validation(self):
+        if not (isinstance(self.data, list) or all(isinstance(item, dict) for item in self.data)):
+            raise AnsibleFilterError("self.data should be a list of dictionaries")
+        elif not isinstance(self.configs, list) or not all(isinstance(item, dict) for item in self.configs):
+            raise AnsibleFilterError("self.configs should be a list of dictionaries")
+        elif not all(len(list(cnf.keys() & set(self.required))) == len(self.required) for cnf in self.configs):
+            raise AnsibleFilterError(f"Configuration should have {', '.join(self.required)} keys")
+        elif 'when' in self.required and not all('when' in cnf for cnf in self.configs):
+            raise AnsibleFilterError("when key is self.required in all configurations")
+        elif 'when' in self.required and not all(isinstance(cnf['when'], list) and all(isinstance(item, list) and len(item) >=2 for item in cnf['when']) for cnf in self.configs):
+            raise AnsibleFilterError("when conditions should be list of lists with at least 2 elements")
+        elif not all(cnf['logic'] in ['and', 'or'] for cnf in self.configs):
+            raise AnsibleFilterError("logic should be 'and' or 'or'")
+        elif not all(isinstance(cnf['overwrite'], bool) for cnf in self.configs):
+            raise AnsibleFilterError("overwrite should be boolean")
+        elif not all(isinstance(cnf['deleteWhenNone'], bool) for cnf in self.configs):
+            raise AnsibleFilterError("deleteWhenNone should be boolean")
 
 # Example config:
 # - attribute: state (required for setattr && selectattr && rejectattr)
@@ -18,7 +49,7 @@ def _common_validation(data, configs, required=[]):
         raise AnsibleFilterError("Data should be a list of dictionaries")
     elif not isinstance(configs, list) or not all(isinstance(item, dict) for item in configs):
         raise AnsibleFilterError("Configs should be a list of dictionaries")
-    elif not all(len(list(cnf.keys() & set(required))) != len(required) for cnf in configs):
+    elif not all(len(list(cnf.keys() & set(required))) == len(required) for cnf in configs):
         raise AnsibleFilterError(f"Configuration should have {', '.join(required)} keys")
     elif 'when' in required and not all('when' in cnf for cnf in configs):
         raise AnsibleFilterError("when key is required in all configurations")
@@ -32,7 +63,7 @@ def _common_validation(data, configs, required=[]):
         raise AnsibleFilterError("deleteWhenNone should be boolean")
     
 def _prep_configs(configs, defaults_head={}, defaults_tail={}):
-    return list(map(lambda x: Tools.merge_dicts(defaults_head, x, defaults_tail), configs))
+    return list(map(lambda x: Dict.merge(defaults_head, x, defaults_tail), configs))
 
 def check_condition(dict_data, when, logic):
     conditionResults = []
@@ -44,15 +75,6 @@ def check_condition(dict_data, when, logic):
             break
         
     return (logic == 'or' and any(conditionResults)) or (logic == 'and' and all(conditionResults))
-
-def set_attr_val(dict_data, attribute, value, overwrite=False, deleteWhenNone=False):
-    if not overwrite and attribute in dict_data:
-        return dict_data
-    if value is None and deleteWhenNone:
-        dict_data.pop(attribute)
-    else:
-        dict_data[attribute] = value
-    return dict_data
 
 def select_or_reject_attr(data, configs, reject=False):
     cnf_defaults_head = {'logic': 'and'}
@@ -71,8 +93,9 @@ def select_or_reject_attr(data, configs, reject=False):
                 result.append(item)
 
     return result
-            
-def setattr(data, configs):
+
+@pass_environment      
+def setattr(environment, data, configs):
     cnf_defaults_head = {'logic': 'and', 'overwrite': False, 'deleteWhenNone': False}
     configs = _prep_configs(configs, cnf_defaults_head)
 
@@ -86,7 +109,7 @@ def setattr(data, configs):
                 continue
             
             finalValue = cnf['value'] if conditionStatus else cnf['else']
-            data[itemIndex] = set_attr_val(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
+            data[itemIndex] = Attr.set_val(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
 
     return data
 
