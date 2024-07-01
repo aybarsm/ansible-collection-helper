@@ -1,109 +1,72 @@
+from __future__ import annotations
 from ansible.errors import AnsibleFilterError
+from ..common.tools import Validate, Dict
 
-def _validate_list(data):
-    if not isinstance(data, list):
-        raise AnsibleFilterError("Data input should be a list")
+def only_with(data, attributes):
+    """
+    Return a dictionary or list of dictionaries 
+    with only the keys that are in the provided list.
 
-def _validate_list_of_dicts(data):
-    _validate_list(data)
+    Example Usage: "{{ data | only_with(['key1', 'key2']) }}"
 
-    if not all(isinstance(item, dict) for item in data):
-        raise AnsibleFilterError("Data input should be a list of dictionaries")
+    Option Parameters:
+     - attributes: The list of attributes to be included. (required)
+    """
+    Validate.dict_or_list_of_dicts(data, 'data')
+    Validate.list(attributes, 'attributes')
 
-def keys_only(data, target):
-    """Return only the keys of the given dictionary that are in the provided list."""
-    if not isinstance(data, dict):
-        raise AnsibleFilterError("keys_only filter expects a dictionary")
-    if not isinstance(target, list):
-        raise AnsibleFilterError("keys_only filter expects a list of keys to include")
-    return [key for key in data.keys() if key in target]
-
-def keys_except(data, target):
-    """Return the keys of the given dictionary except the ones provided in target."""
-    if not isinstance(data, dict):
-        raise AnsibleFilterError("keys_except filter expects a dictionary")
-    if not isinstance(target, list):
-        raise AnsibleFilterError("keys_except filter expects a list of keys to exclude")
-    return [key for key in data.keys() if key not in target]
-
-def only_with(data, target):
-    """Return a dictionary or list of dictionaries with only the keys that are in the provided list."""
-    if not isinstance(target, list):
-        raise AnsibleFilterError("only_with filter expects a list of keys to include")
-    
-    def filter_dict(dictionary):
-        return {key: value for key, value in dictionary.items() if key in target}
-    
     if isinstance(data, dict):
-        return filter_dict(data)
-    elif isinstance(data, list):
-        if all(isinstance(item, dict) for item in data):
-            return [filter_dict(item) for item in data]
-        else:
-            raise AnsibleFilterError("only_with filter expects a list of dictionaries")
+        return Dict.only_with(data, attributes)
     else:
-        raise AnsibleFilterError("only_with filter expects a dictionary or a list of dictionaries")
-
-def all_except(data, target):
-    """Return a dictionary or list of dictionaries with all the keys except the ones provided in target."""
-    if not isinstance(target, list):
-        raise AnsibleFilterError("all_except filter expects a list of keys to exclude")
-    
-    def filter_dict(dictionary):
-        return {key: value for key, value in dictionary.items() if key not in target}
-    
-    if isinstance(data, dict):
-        return filter_dict(data)
-    elif isinstance(data, list):
-        if all(isinstance(item, dict) for item in data):
-            return [filter_dict(item) for item in data]
-        else:
-            raise AnsibleFilterError("all_except filter expects a list of dictionaries")
-    else:
-        raise AnsibleFilterError("all_except filter expects a dictionary or a list of dictionaries")
-
-def set_default(data, key, value, recurse=None):
-    _validate_list_of_dicts(data)
-
-    def set_default_recursively(data, key, value, recurse):
+        result = []
         for item in data:
-            if isinstance(item, dict):
-                if key not in item:
-                    item[key] = value
-                if recurse and recurse in item and isinstance(item[recurse], list):
-                    set_default_recursively(item[recurse], key, value, recurse)
-        return data
+            result.append(Dict.only_with(item, attributes))
 
-    return set_default_recursively(data, key, value, recurse)
+def all_except(data, attributes):
+    """
+    Return a dictionary or list of dictionaries 
+    with all the keys except the ones provided in target.
 
-def has_items(data):
-    if isinstance(data, dict) or isinstance(data, list):
-        return bool(data)
-    else:
-        raise AnsibleFilterError("Value is neither a list nor a dict")
+    Example Usage: "{{ data | all_except(['key1', 'key2']) }}"
 
-def ensure_list(data):
+    Option Parameters:
+     - attributes: The list of attributes to be excluded. (required)
+    """
+    Validate.dict_or_list_of_dicts(data, 'data')
+    Validate.list(attributes, 'attributes')
+
     if isinstance(data, dict):
-        return [{'key': k, 'value': v} for k, v in data.items()]
-    elif isinstance(data, list):
-        if all(isinstance(item, dict) for item in data):
-            return data
-        else:
-            raise AnsibleFilterError("All items in the list should be dictionaries")
+        return Dict.all_except(data, attributes)
     else:
-        raise AnsibleFilterError("Value should be a list or dictionary")
+        result = []
+        for item in data:
+            result.append(Dict.all_except(item, attributes))
 
-def flatten_query(data, keyAttribute, valAttribute=None, assignChar='=', joinChar=' '):
-    if not isinstance(data, list):
-        raise AnsibleFilterError("Input to flatten_query must be a list")
+def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&'):
+    """
+    Convert a dictionary or list of dictionaries to a query string.
+
+    Example Usage: "{{ data | aybars.helper.to_querystring('name', 'age', '=', '&') }}"
+
+    Option Parameters:
+     - keyAttr: The key attribute to be used in the query string. (required)
+     - valAttr: The value attribute to be used in the query string. (optional)
+     - assignChar: The character to be used between key and value. (optional | default: '=')
+     - joinChar: The character to be used between key-value pairs. (optional | default: '&')
+    """
+    Validate.dict_or_list_of_dicts(data, 'data')
+
+    if isinstance(data, dict):
+        data = [data]
 
     result = []
     for item in data:
-        if isinstance(item, dict) and keyAttribute in item:
-            if valAttribute and valAttribute in item:
-                result.append(f"{item[keyAttribute]}{assignChar}{item[valAttribute]}")
+        if keyAttr in item:
+            if valAttr and valAttr in item:
+                result.append(f"{item[keyAttr]}{assignChar}{item[valAttr]}")
             else:
-                result.append(f"{item[keyAttribute]}")
+                result.append(f"{item[keyAttr]}")
+
     return joinChar.join(result)
 
 def unique_by_attribute(data, attribute):
@@ -146,121 +109,23 @@ def _unique_recursive(data, attribute, recurse=None):
     return unique_by_attribute(data, attribute)
 
 def unique_recursive(data, attributes, recurse=None):
-    if not (isinstance(data, list) or all(isinstance(entry, dict) for entry in data)):
-        raise AnsibleFilterError("unique_recursive expects a list of dictionaries")
-    
-    if not isinstance(attributes, (str, list)):
-        raise AnsibleFilterError("attributes should be a string or list")
+    Validate.list_of_dicts(data, 'data')
     
     if isinstance(attributes, str):
         attributes = [attributes]
+    else:
+        Validate.list(attributes, 'attributes')
     
     for attr in attributes:
         data = _unique_recursive(data, attr, recurse)
 
     return data
 
-def selectattr_defined(data, attributes, logic='and'):
-    if not isinstance(data, list):
-        raise AnsibleFilterError("selectattr_defined expects a list of dictionaries")
-
-    if isinstance(attributes, str):
-        attributes = [attributes]
-
-    if not all(isinstance(attr, str) for attr in attributes):
-        raise AnsibleFilterError("attributes should be a string or list of strings")
-
-    if logic not in ['and', 'or']:
-        raise AnsibleFilterError("logic should be either 'and' or 'or'")
-
-    result = []
-    for item in data:
-        if isinstance(item, dict):
-            if logic == 'and':
-                if all(attr in item for attr in attributes):
-                    result.append(item)
-            elif logic == 'or':
-                if any(attr in item for attr in attributes):
-                    result.append(item)
-
-    return result
-
-def split_attr(data, srcAttr, dstAttr, searchStr, dstSideRight=True, srcRename=None, skipNotEligible=True):
-    _validate_list(data)
-
-    result = []
-    for item in data:
-        if not isinstance(item, dict):
-            if skipNotEligible:
-                result.append(item)
-                continue
-            else:
-                raise AnsibleFilterError("Each item in the list should be a dictionary")
-        
-        if srcAttr in item and searchStr in item[srcAttr]:
-            left, right = item[srcAttr].split(searchStr, 1)
-            new_item = item.copy()
-            if dstSideRight:
-                new_item[dstAttr] = right
-                if srcRename:
-                    new_item[srcRename] = left
-                    del new_item[srcAttr]
-                else:
-                    new_item[srcAttr] = left
-            else:
-                new_item[dstAttr] = left
-                if srcRename:
-                    new_item[srcRename] = right
-                    del new_item[srcAttr]
-                else:
-                    new_item[srcAttr] = right
-            result.append(new_item)
-        else:
-            result.append(item)
-
-    return result
-
-def join_attr(data, leftAttr, rightAttr, joinStr, dstAttr=None, overwrite=True, deleteSrcAttrs=False, skipNotEligible=True):
-    _validate_list(data)
-
-    if not dstAttr:
-        dstAttr = leftAttr
-
-    result = []
-    for item in data:
-        if not isinstance(item, dict):
-            if skipNotEligible:
-                result.append(item)
-                continue
-            else:
-                raise AnsibleFilterError("Each item in the list should be a dictionary")
-
-        if leftAttr in item and rightAttr in item and (dstAttr not in item or overwrite):
-            new_item = item.copy()
-            new_item[dstAttr] = f"{item[leftAttr]}{joinStr}{item[rightAttr]}"
-            if deleteSrcAttrs and dstAttr != leftAttr:
-                del new_item[leftAttr]
-            if deleteSrcAttrs and dstAttr != rightAttr:
-                del new_item[rightAttr]
-            result.append(new_item)
-        else:
-            result.append(item)
-
-    return result
-
 class FilterModule(object):
     def filters(self):
         return {
-            'keys_only': keys_only,
-            'keys_except': keys_except,
             'only_with': only_with,
             'all_except': all_except,
-            'set_default': set_default,
-            'has_items': has_items,
-            'ensure_list': ensure_list,
-            'flatten_query': flatten_query,
+            'to_querystring': to_querystring,
             'unique_recursive': unique_recursive,
-            'selectattr_defined': selectattr_defined,
-            'split_attr': split_attr,
-            'join_attr': join_attr,
         }

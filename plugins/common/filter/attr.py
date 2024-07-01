@@ -1,6 +1,7 @@
 from ansible.errors import AnsibleFilterError
 from ..tools import Dict, JinjaEnv
 
+
 class Attr:
     def __init__(self, jinja_env, action, data, configs, required, cnf_defaults={}):
         self.jinja = JinjaEnv(jinja_env)
@@ -53,7 +54,7 @@ class Attr:
         whenResult = Dict.when(self.jinja, item, cnf['when'], cnf['logic'])
         finalValue = cnf['else'] if 'else' in cnf and not whenResult else (cnf['value'] if whenResult else item[cnf['attribute']])
 
-        return Dict.set_val(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
+        return Dict.set_attr(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
     
     def result_split(self, item, cnf):
         srcAttr, dstAttr, searchStr = [cnf['srcAttr'], cnf['dstAttr'], cnf['search']]
@@ -62,7 +63,7 @@ class Attr:
         
         if not srcAttr in item or not str(searchStr) in str(item[srcAttr]):
             if 'dstDefault' in cnf and whenResult:
-                item = Dict.set_val(item, dstAttr, cnf['dstDefault'], cnf['overwrite'], False)
+                item = Dict.set_attr(item, dstAttr, cnf['dstDefault'], cnf['overwrite'], False)
             return item
 
         if (not whenResult):
@@ -72,12 +73,12 @@ class Attr:
         srcVal = item[srcAttr] if cnf['leaveSrcAttr'] else (leftVal if cnf['dstSide'] == 'right' else rightVal)
         dstVal = rightVal if cnf['dstSide'] == 'right' else leftVal
 
-        item = Dict.set_val(item, dstAttr, dstVal, cnf['overwrite'], False)
-        item = Dict.set_val(item, srcAttr, srcVal, cnf['overwrite'], False)
+        item = Dict.set_attr(item, dstAttr, dstVal, cnf['overwrite'], False)
+        item = Dict.set_attr(item, srcAttr, srcVal, cnf['overwrite'], False)
 
         if 'renameSrcAttr' in cnf and cnf['overwrite']:
-            item = Dict.set_val(item, cnf['renameSrcAttr'], srcVal, cnf['overwrite'], False)
-            item = Dict.del_val(item, srcAttr)
+            item = Dict.set_attr(item, cnf['renameSrcAttr'], srcVal, cnf['overwrite'], False)
+            item = Dict.del_attr(item, srcAttr)
 
         return item
     
@@ -93,11 +94,11 @@ class Attr:
             return item
         
         finalVal = f"{item[leftAttr]}{joinStr}{item[rightAttr]}"
-        item = Dict.set_val(item, dstAttr, finalVal, cnf['overwrite'], False)
+        item = Dict.set_attr(item, dstAttr, finalVal, cnf['overwrite'], False)
         
         if cnf['deleteSrcAttrs']:
-            item = item if leftAttr == dstAttr else Dict.del_val(item, leftAttr)
-            item = item if rightAttr == dstAttr else Dict.del_val(item, rightAttr)
+            item = item if leftAttr == dstAttr else Dict.del_attr(item, leftAttr)
+            item = item if rightAttr == dstAttr else Dict.del_attr(item, rightAttr)
 
         return item
     

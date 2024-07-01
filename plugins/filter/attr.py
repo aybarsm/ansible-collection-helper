@@ -1,5 +1,6 @@
-from jinja2.filters import pass_environment
+from __future__ import annotations
 from ..common.filter.attr import Attr
+from jinja2.filters import pass_environment
 
 def select_or_reject_attr(environment,data, configs, reject=False):
     required = ['when']

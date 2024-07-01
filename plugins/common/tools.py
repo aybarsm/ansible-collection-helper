@@ -1,5 +1,38 @@
 from ansible.errors import AnsibleFilterError
 
+class Validate:
+    @staticmethod
+    def list(data, attrName):
+        if not isinstance(data, list):
+            raise AnsibleFilterError(f"{attrName} input should be a list")
+    
+    @staticmethod
+    def dict(data, attrName):
+        if not isinstance(data, dict):
+            raise AnsibleFilterError(f"{attrName} input should be a dictionary")
+    
+    @staticmethod
+    def list_of_dicts(data, attrName):
+        Validate.list(data, attrName)
+        if not all(isinstance(item, dict) for item in data):
+            raise AnsibleFilterError(f"{attrName} input should be a list of dictionaries")
+    
+    @staticmethod
+    def dict_or_list_of_dicts(data, attrName):
+        Validate.dict(data, attrName)
+        Validate.list_of_dicts(data, attrName)
+
+    @staticmethod
+    def string(data, attrName):
+        if not isinstance(data, str):
+            raise AnsibleFilterError(f"{attrName} input should be a string")
+    
+    @staticmethod
+    def list_of_strings(data, attrName):
+        Validate.list(data, attrName)
+        if not all(isinstance(item, str) for item in data):
+            raise AnsibleFilterError(f"{attrName} input should be a list of strings")
+
 class JinjaEnv:
     def __init__(self, jinja_env):
         self.jinja_env = jinja_env
@@ -55,7 +88,7 @@ class Dict:
         return newDict
 
     @staticmethod
-    def set_val(dict_data, attribute, value, overwrite=False, deleteWhenNone=False):
+    def set_attr(dict_data, attribute, value, overwrite=False, deleteWhenNone=False):
         if not overwrite and attribute in dict_data:
             return dict_data
         if value is None and deleteWhenNone:
@@ -65,24 +98,37 @@ class Dict:
         return dict_data
     
     @staticmethod
-    def del_val(dict_data, attribute):
+    def del_attr(dict_data, attribute):
         if attribute in dict_data:
             dict_data.pop(attribute)
         return dict_data
     
     @staticmethod
-    def has_all(dict_data, attributes):
+    def filter(dict_data, callback):
+        return {key: value for key, value in dict_data.items() if callback(key, value)}
+
+    @staticmethod
+    def only_with(dict_data, attributes):
+        return Dict.filter(dict_data, lambda key, value: key in attributes)
+    
+    @staticmethod
+    def all_except(dict_data, attributes):
+        return Dict.filter(dict_data, lambda key, value: key not in attributes)
+        
+    @staticmethod
+    def has_any_or_all(hasAll, dict_data, attributes):
         if isinstance(attributes, str):
             attributes = [attributes]
         
-        return all(attr in dict_data for attr in attributes)
+        return all(attr in dict_data for attr in attributes) if hasAll else any(attr in dict_data for attr in attributes)
+    
+    @staticmethod
+    def has_all(dict_data, attributes):
+        return Dict.has_any_or_all(True, dict_data, attributes)
 
     @staticmethod
     def has_any(dict_data, attributes):
-        if isinstance(attributes, str):
-            attributes = [attributes]
-        
-        return any(attr in dict_data for attr in attributes)
+        return Dict.has_any_or_all(False, dict_data, attributes)
     
     @staticmethod
     def when(jinja, dict_data, when, logic):
