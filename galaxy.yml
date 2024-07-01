@@ -5,9 +5,18 @@ version: 0.0.1
 readme: README.md
 authors:
   - Murat Aybars <hello@aybarsm.com> (https://aybarsm.com)
-description: Ansible collection that...
+description: Ansible collection that provides many useful helper modules and plugins.
 license_file: LICENSE
-tags: []
+tags:
+  - helper
+  - filter
+  - collection
+  - dict
+  - list
+  - conditionals
+  - setattr
+  - splitattr
+  - joinattr
 dependencies: {}
 repository: https://github.com/aybarsm/ansible-collection-helper
 documentation: https://github.com/aybarsm/ansible-collection-helper
