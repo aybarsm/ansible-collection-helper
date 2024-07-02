@@ -1,5 +1,5 @@
 from ansible.errors import AnsibleFilterError
-from ..tools import Dict, JinjaEnv
+from ..tools import Validate, Dict, JinjaEnv
 
 
 class Attr:
@@ -19,18 +19,19 @@ class Attr:
             raise AnsibleFilterError("data must be a list of dictionaries")
         
         for cnfIndex, cnf in enumerate(self.configs):
-            if not isinstance(cnf, dict):
-                raise AnsibleFilterError("configuration elements must be dictionaries")
+            Validate.dict(cnf, 'configuration elements')
             
-            if not all(key in cnf for key in self.required):
+            if not Dict.has_all(cnf, self.required):
                 raise AnsibleFilterError(f"configuration elements must have all required keys: {', '.join(self.required)}")
             
             if 'logic' in cnf and not cnf['logic'] in ['and', 'or']:
                 raise AnsibleFilterError("logic should be 'and' or 'or'")
 
             if 'when' in cnf:
-                if not isinstance(cnf['when'], list) or (not all(isinstance(condition, list) and len(condition) >=2 for condition in cnf['when'])):
-                    raise AnsibleFilterError("when conditions should be list of lists with at least 2 elements")
+                Validate.list_or_tuple(cnf['when'], 'when conditions')
+
+                if not all(isinstance(condition, (tuple, list)) and len(condition) >=2 for condition in cnf['when']):
+                    raise AnsibleFilterError("when conditions should be list (or tuple) of lists (or tuples) with at least 2 elements")
                 
             if 'dstSide' in cnf and not cnf['dstSide'] in ['right', 'left']:
                 raise AnsibleFilterError("dstSide should be 'right' or 'left'")
@@ -52,9 +53,22 @@ class Attr:
 
     def result_set(self, item, cnf):
         whenResult = Dict.when(self.jinja, item, cnf['when'], cnf['logic'])
-        finalValue = cnf['else'] if 'else' in cnf and not whenResult else (cnf['value'] if whenResult else item[cnf['attribute']])
 
-        return Dict.set_attr(item, cnf['attribute'], finalValue, cnf['overwrite'], cnf['deleteWhenNone'])
+        copyMode = 'mode' in cnf and cnf['mode'] in ['copy', 'copy_delete']
+        copyEligible = copyMode and ((whenResult and cnf['value'] in item) or (not whenResult and 'else' in cnf and cnf['else'] in item))
+
+        if whenResult:
+            finalVal = item[cnf['value']] if copyEligible else cnf['value']
+            item = Dict.set_attr(item, cnf['attribute'], finalVal, cnf['overwrite'], cnf['deleteWhenNone'])
+            if copyEligible and cnf['mode'] == 'copy_delete':
+                item = Dict.del_attr(item, cnf['value'])
+        elif not whenResult and 'else' in cnf:
+            finalVal = item[cnf['else']] if copyEligible else cnf['else']
+            item = Dict.set_attr(item, cnf['attribute'], cnf['else'], cnf['overwrite'], cnf['deleteWhenNone'])
+            if copyEligible and cnf['mode'] == 'copy_delete':
+                item = Dict.del_attr(item, cnf['else'])
+
+        return item
     
     def result_split(self, item, cnf):
         srcAttr, dstAttr, searchStr = [cnf['srcAttr'], cnf['dstAttr'], cnf['search']]

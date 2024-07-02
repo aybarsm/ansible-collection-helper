@@ -2,36 +2,64 @@ from ansible.errors import AnsibleFilterError
 
 class Validate:
     @staticmethod
+    def isList(data):
+        return isinstance(data, list)
+
+    @staticmethod
+    def isTuple(data):
+        return isinstance(data, tuple)
+    
+    @staticmethod
+    def isDict(data):
+        return isinstance(data, dict)
+    
+    @staticmethod
+    def isString(data):
+        return isinstance(data, str)
+    
+    @staticmethod
+    def isListOfDicts(data):
+        return Validate.isList(data) and all(Validate.isDict(item) for item in data)
+    
+    @staticmethod
     def list(data, attrName):
-        if not isinstance(data, list):
-            raise AnsibleFilterError(f"{attrName} input should be a list")
+        if not Validate.isList(data):
+            raise AnsibleFilterError(f"{attrName} should be list")
+    
+    @staticmethod
+    def tuple(data, attrName):
+        if not Validate.isList(data):
+            raise AnsibleFilterError(f"{attrName} should be tuple")
     
     @staticmethod
     def dict(data, attrName):
-        if not isinstance(data, dict):
-            raise AnsibleFilterError(f"{attrName} input should be a dictionary")
+        if not Validate.isDict(data):
+            raise AnsibleFilterError(f"{attrName} should be dictionary")
+    
+    @staticmethod
+    def list_or_tuple(data, attrName):
+        if not Validate.isList(data) and not Validate.isTuple(data):
+            raise AnsibleFilterError(f"{attrName} should be list or tuple")
     
     @staticmethod
     def list_of_dicts(data, attrName):
-        Validate.list(data, attrName)
-        if not all(isinstance(item, dict) for item in data):
-            raise AnsibleFilterError(f"{attrName} input should be a list of dictionaries")
+        if not Validate.isListOfDicts(data):
+            raise AnsibleFilterError(f"{attrName} should be list of dictionaries")
     
     @staticmethod
     def dict_or_list_of_dicts(data, attrName):
-        Validate.dict(data, attrName)
-        Validate.list_of_dicts(data, attrName)
+        if not (Validate.isDict(data) or Validate.isListOfDicts(data)):
+            raise AnsibleFilterError(f"{attrName} should be dictionary or list of dictionaries")
 
     @staticmethod
     def string(data, attrName):
-        if not isinstance(data, str):
-            raise AnsibleFilterError(f"{attrName} input should be a string")
+        if not Validate.isString(data):
+            raise AnsibleFilterError(f"{attrName} should be string")
     
     @staticmethod
     def list_of_strings(data, attrName):
-        Validate.list(data, attrName)
-        if not all(isinstance(item, str) for item in data):
-            raise AnsibleFilterError(f"{attrName} input should be a list of strings")
+        if not (Validate.isList(data) or all(isinstance(item, str) for item in data)):
+            raise AnsibleFilterError(f"{attrName} should be list of strings")
 
 class JinjaEnv:
     def __init__(self, jinja_env):

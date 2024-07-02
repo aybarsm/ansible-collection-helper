@@ -26,6 +26,7 @@ def setattr(environment, data, configs):
     - attribute: state
       value: absent
       else: present
+      mode: copy
       overwrite: false
       deleteWhenNone: false
       when:
@@ -38,6 +39,7 @@ def setattr(environment, data, configs):
      - attribute: The attribute to be set. (required)
      - value: The value to be set if the condition is met. (required)
      - else: The value to be set if the condition is not met. (optional)
+     - mode: The mode to be used for setting the attribute. (optional | options: 'copy', 'copy_delete')
      - overwrite: Overwrite attribute if already exists in the dictionary. (optional | default: true)
      - deleteWhenNone: Delete attribute if the value is set to be None either with 'value' or 'else' key. (optional | default: false)
      - when: The condition(s) to be met to reject the dictionary item in the list. (optional)
