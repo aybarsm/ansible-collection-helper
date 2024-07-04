@@ -47,6 +47,11 @@ class Validate:
             raise AnsibleFilterError(f"{attrName} should be list of dictionaries")
     
     @staticmethod
+    def dict_of_lists(data, attrName):
+        if not (Validate.isDict(data) and all(Validate.isList(item) for item in data.values())):
+            raise AnsibleFilterError(f"{attrName} should be dictionary of lists")
+    
+    @staticmethod
     def dict_or_list_of_dicts(data, attrName):
         if not (Validate.isDict(data) or Validate.isListOfDicts(data)):
             raise AnsibleFilterError(f"{attrName} should be dictionary or list of dictionaries")

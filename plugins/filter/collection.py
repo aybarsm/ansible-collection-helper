@@ -69,6 +69,24 @@ def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&'):
 
     return joinChar.join(result)
 
+def to_list_of_dicts(data, defaults={}):
+    """
+    Convert a dictionary of lists to a list of dictionaries.
+    """
+    Validate.dict(data, 'data')
+    Validate.dict(defaults, 'defaults')
+    
+    firstKey = list(data.keys())[0]
+    result = []
+
+    for keyIndex, value in enumerate(data[firstKey]):
+        new_item = defaults.copy()
+        for dataKey in data.keys():
+            new_item[dataKey] = data[dataKey][keyIndex]
+        result.append(new_item)
+        
+    return result
+
 def unique_by_attribute(data, attribute):
     seen = set()
     result = []
@@ -128,4 +146,5 @@ class FilterModule(object):
             'all_except': all_except,
             'to_querystring': to_querystring,
             'unique_recursive': unique_recursive,
+            'to_list_of_dicts': to_list_of_dicts,
         }
