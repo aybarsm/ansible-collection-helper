@@ -139,6 +139,28 @@ def unique_recursive(data, attributes, recurse=None):
 
     return data
 
+def replace_aliases(data, attributes, overwrite=False, removeAliases=False):
+    Validate.dict_or_list_of_dicts(data, 'data')
+    Validate.dict(attributes, 'attributes')
+
+    rtrDict = False
+    if isinstance(data, dict):
+        data = [data]
+        rtrDict = True
+    
+    result = data.copy()
+    for itemKey, item in enumerate(data):
+        for attr, aliases in attributes.items():
+            aliases = aliases if isinstance(aliases, list) else [aliases]
+            for alias in aliases:
+                if alias in item:
+                    if not attr in item or overwrite:
+                        result[itemKey][attr] = item[alias]
+                    if removeAliases:
+                        del result[itemKey][alias]
+
+    return result[0] if rtrDict else result
+
 class FilterModule(object):
     def filters(self):
         return {
@@ -147,4 +169,5 @@ class FilterModule(object):
             'to_querystring': to_querystring,
             'unique_recursive': unique_recursive,
             'to_list_of_dicts': to_list_of_dicts,
+            'replace_aliases': replace_aliases,
         }
