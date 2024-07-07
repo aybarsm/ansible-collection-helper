@@ -105,6 +105,8 @@ class JinjaEnv:
             return attribute in data
         elif test == 'undefined':
             return attribute not in data
+        elif test == 'in':
+            return self.jinja_env.tests['in'](data[attribute], value)
         elif value is None:
             return self.jinja_env.tests[test](data[attribute])
         else:
