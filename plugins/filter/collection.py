@@ -44,17 +44,6 @@ def all_except(data, attributes):
         for item in data:
             result.append(Dict.all_except(item, attributes))
 
-def filter_pass(data, filterName, filterArgs=None):
-    if isinstance(filterArgs, str):
-        filterArgs = [filterArgs]
-    if isinstance(filterArgs, list):
-        filterArgs = [data] + filterArgs
-        return JinjaFilters[filterName](data, *filterArgs)
-    elif isinstance(filterArgs, dict):
-        return JinjaFilters[filterName](data, **filterArgs)
-    else:
-        return JinjaFilters[filterName](data)
-
 def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&', recurse=None, recurseIndentSteps=0, recurseIndentChar=' ', repeatJoinCharOnMainLevels=False):
     """
     Convert a dictionary or list of dictionaries to a query string.
@@ -232,6 +221,5 @@ class FilterModule(object):
             'unique_recursive': unique_recursive,
             'to_list_of_dicts': to_list_of_dicts,
             'replace_aliases': replace_aliases,
-            'filter_pass': filter_pass,
             'unique_combinations': unique_combinations,
         }
