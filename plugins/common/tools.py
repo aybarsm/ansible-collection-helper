@@ -1,4 +1,7 @@
+import json
 from ansible.errors import AnsibleFilterError
+import hashlib
+import base64
 
 class Validate:
     @staticmethod
@@ -20,6 +23,14 @@ class Validate:
     @staticmethod
     def isListOfDicts(data):
         return Validate.isList(data) and all(Validate.isDict(item) for item in data)
+
+    @staticmethod
+    def isListofLists(data):
+        return Validate.isList(data) and all(Validate.isList(item) for item in data)
+    
+    @staticmethod
+    def isLisOfTuples(data):
+        return Validate.isList(data) and all(Validate.isTuple(item) for item in data)
     
     @staticmethod
     def list(data, attrName):
@@ -65,6 +76,11 @@ class Validate:
     def list_of_strings(data, attrName):
         if not (Validate.isList(data) or all(isinstance(item, str) for item in data)):
             raise AnsibleFilterError(f"{attrName} should be list of strings")
+
+    @staticmethod
+    def list_of_lists_or_tuples(data, attrName):
+        if not (Validate.isList(data) and all(Validate.isList(item) or Validate.isTuple(item) for item in data)):
+            raise AnsibleFilterError(f"{attrName} should be list of lists or tuples")
 
 class JinjaEnv:
     def __init__(self, jinja_env):
@@ -179,3 +195,39 @@ class Dict:
                 break
             
         return (logic == 'or' and any(conditionResults)) or (logic == 'and' and all(conditionResults))
+
+class Convert:
+    @staticmethod
+    def to_string(data, trim=False):
+        result = ''
+        if isinstance(data, str):
+            result = data
+        elif isinstance(data, dict) or isinstance(data, list) or isinstance(data, tuple):
+            result = Convert.to_json(data)
+        else:
+            result = str(data)
+
+        return result.strip() if trim else result
+    
+    @staticmethod
+    def to_md5(data):
+        return hashlib.md5(str(data).encode()).hexdigest()
+    
+    @staticmethod
+    def to_base64_encode(data):
+        return base64.b64encode(data.encode()).decode()
+
+    @staticmethod
+    def to_base64_decode(data):
+        return base64.b64decode(data).decode()
+    
+    @staticmethod
+    def to_json(data):
+        return json.dumps(data)
+    
+    @staticmethod
+    def to_md5_base64_encode(data, to_string=False, trim=False):
+        if to_string:
+            data = Convert.to_string(data, trim)
+
+        return Convert.to_base64_encode(Convert.to_md5(data))

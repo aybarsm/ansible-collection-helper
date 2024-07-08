@@ -1,6 +1,8 @@
 from __future__ import annotations
 from ansible.errors import AnsibleFilterError
-from ..common.tools import Validate, Dict
+from ..common.tools import Validate, Dict, Convert
+from jinja2.filters import FILTERS as JinjaFilters
+import hashlib
 
 def only_with(data, attributes):
     """
@@ -42,7 +44,18 @@ def all_except(data, attributes):
         for item in data:
             result.append(Dict.all_except(item, attributes))
 
-def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&'):
+def filter_pass(data, filterName, filterArgs=None):
+    if isinstance(filterArgs, str):
+        filterArgs = [filterArgs]
+    if isinstance(filterArgs, list):
+        filterArgs = [data] + filterArgs
+        return JinjaFilters[filterName](data, *filterArgs)
+    elif isinstance(filterArgs, dict):
+        return JinjaFilters[filterName](data, **filterArgs)
+    else:
+        return JinjaFilters[filterName](data)
+
+def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&', recurse=None, recurseIndentSteps=0, recurseIndentChar=' ', repeatJoinCharOnMainLevels=False):
     """
     Convert a dictionary or list of dictionaries to a query string.
 
@@ -53,6 +66,10 @@ def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&'):
      - valAttr: The value attribute to be used in the query string. (optional)
      - assignChar: The character to be used between key and value. (optional | default: '=')
      - joinChar: The character to be used between key-value pairs. (optional | default: '&')
+     - recurse: The attribute to be used for recursion. (optional)
+     - recurseIndentSteps: The number of steps to be used for indentation for child objects. (optional | default: 0)
+     - recurseIndentChar: The character to be used for indentation. (optional | default: ' ')
+     - repeatJoinCharOnMainLevels: Whether to repeat the join character on main levels. (optional | default: False)
     """
     Validate.dict_or_list_of_dicts(data, 'data')
 
@@ -60,14 +77,24 @@ def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&'):
         data = [data]
 
     result = []
-    for item in data:
-        if keyAttr in item:
-            if valAttr and valAttr in item:
-                result.append(f"{item[keyAttr]}{assignChar}{item[valAttr]}")
-            else:
-                result.append(f"{item[keyAttr]}")
+    
+    def _to_querystring(innerData, level = 0):
+        indent = recurseIndentChar * (level * recurseIndentSteps)
+        for item in innerData:
+            if keyAttr in item:
+                if repeatJoinCharOnMainLevels and level == 0:
+                    result.append('')
+                if valAttr and valAttr in item:
+                    result.append(f"{indent}{item[keyAttr]}{assignChar}{item[valAttr]}")
+                else:
+                    result.append(f"{indent}{item[keyAttr]}")
 
-    return joinChar.join(result)
+                if recurse and recurse in item and item[recurse]:
+                    _to_querystring(item[recurse], level + 1)
+                
+    _to_querystring(data)
+
+    return joinChar.join(result).strip(joinChar)
 
 def to_list_of_dicts(data, defaults={}):
     """
@@ -85,6 +112,41 @@ def to_list_of_dicts(data, defaults={}):
             new_item[dataKey] = data[dataKey][keyIndex]
         result.append(new_item)
         
+    return result
+
+def unique_combinations(data, attrCombinations, skipMissing=True):
+    """
+    Return a list of dictionaries with unique attribute combinations.
+
+    Example Usage: "{{ data | unique_combinations([['key1', 'key2'], ['key3', 'key4', 'key5']]) }}"
+
+    Option Parameters:
+     - attrCombinations: The list of attribute combinations to be checked. (required)
+     - skipMissing: Whether to skip the items with missing attributes. (optional | default: True)
+    """
+    Validate.list_of_dicts(data, 'data')
+    Validate.list_of_lists_or_tuples(attrCombinations, 'attrCombinations')
+
+    result = []
+    seen = set()
+    for attrs in attrCombinations:
+        attrs.sort()
+        for item in data:
+            if not Dict.has_all(item, attrs):
+                if skipMissing:
+                    continue
+                else:
+                    result.append(item)
+
+            innerResult = []
+            for attr in attrs:
+                innerResult.append(Convert.to_string(item[attr], True))
+            
+            current_entry = Convert.to_md5_base64_encode(innerResult, True, True)
+            if current_entry not in seen:
+                result.append(item)
+                seen.add(current_entry)
+           
     return result
 
 def unique_by_attribute(data, attribute):
@@ -170,4 +232,6 @@ class FilterModule(object):
             'unique_recursive': unique_recursive,
             'to_list_of_dicts': to_list_of_dicts,
             'replace_aliases': replace_aliases,
+            'filter_pass': filter_pass,
+            'unique_combinations': unique_combinations,
         }
