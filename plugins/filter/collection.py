@@ -1,8 +1,5 @@
 from __future__ import annotations
-from ansible.errors import AnsibleFilterError
 from ..common.tools import Validate, Dict, Convert
-from jinja2.filters import FILTERS as JinjaFilters
-import hashlib
 
 def only_with(data, attributes):
     """
@@ -220,6 +217,6 @@ class FilterModule(object):
             'to_querystring': to_querystring,
             'unique_recursive': unique_recursive,
             'to_list_of_dicts': to_list_of_dicts,
-            'replace_aliases': replace_aliases,
+            'replace_aliases': replace_aliases,``
             'unique_combinations': unique_combinations,
         }
