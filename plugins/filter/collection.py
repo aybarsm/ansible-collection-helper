@@ -217,6 +217,6 @@ class FilterModule(object):
             'to_querystring': to_querystring,
             'unique_recursive': unique_recursive,
             'to_list_of_dicts': to_list_of_dicts,
-            'replace_aliases': replace_aliases,``
+            'replace_aliases': replace_aliases,
             'unique_combinations': unique_combinations,
         }
