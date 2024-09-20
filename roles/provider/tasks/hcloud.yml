@@ -1,0 +1,80 @@
+---
+- name: Ensure Hetzner Cloud Token is set
+  ansible.builtin.assert:
+    that: token_env or token_var
+    fail_msg: "HCLOUD_TOKEN is not set in environment or vars."
+    success_msg: "HCLOUD_TOKEN is found."
+  vars:
+    token_env: lookup('ansible.builtin.env', 'HCLOUD_TOKEN', default=undef()) is not undefined
+    token_var: lookup('ansible.builtin.vars', 'HCLOUD_TOKEN', default=undef()) is not undefined
+  register: provider__assert_hcloud_token
+
+- name: Gather Hetzner Cloud info
+  block:
+    #TODO: Complete Hetzner Cloud info gathering tasks
+    - name: Gather Hetzner Cloud Server info
+      hetzner.hcloud.server_info:
+        api_token: "{{ api_token }}"
+      # delegate_to: localhost
+      # run_once: true
+      register: provider__hcloud_info_server
+    - name: Gather Hetzner Cloud Network info
+      hetzner.hcloud.network_info:
+        api_token: "{{ api_token }}"
+      # delegate_to: localhost
+      # run_once: true
+      register: provider__hcloud_info_network
+    # - name: Gather Hetzner Cloud Datacenter info
+    #   hetzner.hcloud.datacenter_info:
+    #     api_token: "{{ api_token }}"
+    #   delegate_to: localhost
+    #   run_once: true
+    #   register: provider__hcloud_info_datacenter
+    # - name: Gather Hetzner Cloud Firewall info
+    #   hetzner.hcloud.firewall_info:
+    #     api_token: "{{ api_token }}"
+    #   delegate_to: localhost
+    #   run_once: true
+    #   register: provider__hcloud_info_firewall
+    # - name: Gather Hetzner Cloud Floating IP info
+    #   hetzner.hcloud.floating_ip_info:
+    #     api_token: "{{ api_token }}"
+    #   delegate_to: localhost
+    #   run_once: true
+    #   register: provider__hcloud_info_floating_ip
+    # - name: Gather Hetzner Cloud Image info
+    #   hetzner.hcloud.image_info:
+    #     api_token: "{{ api_token }}"
+    #   delegate_to: localhost
+    #   run_once: true
+    #   register: provider__hcloud_info_image
+    # - name: Gather Hetzner Cloud ISO info
+    #   hetzner.hcloud.iso_info:
+    #     api_token: "{{ api_token }}"
+    #   delegate_to: localhost
+    #   run_once: true
+    #   register: provider__hcloud_info_iso
+    # - name: Gather Hetzner Cloud Location info
+    #   hetzner.hcloud.location_info:
+    #     api_token: "{{ api_token }}"
+    #   delegate_to: localhost
+    #   run_once: true
+    #   register: provider__hcloud_info_location
+    # - name: Gather Hetzner Cloud Location info
+    #   hetzner.hcloud.location_info:
+    #     api_token: "{{ api_token }}"
+    #   delegate_to: localhost
+    #   run_once: true
+    #   register: provider__hcloud_info_location
+    - name: Set main fact for Hetzner Cloud provider
+      ansible.builtin.set_fact:
+        provider__data: "{{ provider__data | default({}) | combine({'hcloud': data_hcloud}) }}"
+      vars:
+        data_hcloud:
+          server: "{{ provider__hcloud_info_server.hcloud_server_info }}"
+          network: "{{ provider__hcloud_info_network.hcloud_network_info }}"
+  delegate_to: localhost
+  run_once: true
+  vars:
+    api_token: "{{ lookup('ansible.builtin.env', 'HCLOUD_TOKEN', default=lookup('ansible.builtin.vars', 'HCLOUD_TOKEN')) }}"
+  when: not provider__assert_hcloud_token.failed

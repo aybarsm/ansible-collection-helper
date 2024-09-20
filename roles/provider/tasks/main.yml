@@ -1,0 +1,6 @@
+---
+- name: Include Hetzner Cloud tasks
+  include_tasks: hcloud.yml
+  when:
+    - provider__role_enabled
+    - provider__name | default('') == 'hcloud'

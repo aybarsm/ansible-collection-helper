@@ -3,7 +3,7 @@ from ..common.tools import Validate, Dict, Convert
 
 def only_with(data, attributes):
     """
-    Return a dictionary or list of dictionaries 
+    Return a dictionary or list of dictionaries
     with only the keys that are in the provided list.
 
     Example Usage: "{{ data | only_with(['key1', 'key2']) }}"
@@ -21,9 +21,11 @@ def only_with(data, attributes):
         for item in data:
             result.append(Dict.only_with(item, attributes))
 
+    return result
+
 def all_except(data, attributes):
     """
-    Return a dictionary or list of dictionaries 
+    Return a dictionary or list of dictionaries
     with all the keys except the ones provided in target.
 
     Example Usage: "{{ data | all_except(['key1', 'key2']) }}"
@@ -40,6 +42,8 @@ def all_except(data, attributes):
         result = []
         for item in data:
             result.append(Dict.all_except(item, attributes))
+
+    return result
 
 def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&', recurse=None, recurseIndentSteps=0, recurseIndentChar=' ', repeatJoinCharOnMainLevels=False):
     """
@@ -63,7 +67,7 @@ def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&', re
         data = [data]
 
     result = []
-    
+
     def _to_querystring(innerData, level = 0):
         indent = recurseIndentChar * (level * recurseIndentSteps)
         for item in innerData:
@@ -77,7 +81,7 @@ def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&', re
 
                 if recurse and recurse in item and item[recurse]:
                     _to_querystring(item[recurse], level + 1)
-                
+
     _to_querystring(data)
 
     return joinChar.join(result).strip(joinChar)
@@ -88,7 +92,7 @@ def to_list_of_dicts(data, defaults={}):
     """
     Validate.dict(data, 'data')
     Validate.dict(defaults, 'defaults')
-    
+
     firstKey = list(data.keys())[0]
     result = []
 
@@ -97,7 +101,7 @@ def to_list_of_dicts(data, defaults={}):
         for dataKey in data.keys():
             new_item[dataKey] = data[dataKey][keyIndex]
         result.append(new_item)
-        
+
     return result
 
 def unique_combinations(data, attrCombinations, skipMissing=True):
@@ -127,12 +131,12 @@ def unique_combinations(data, attrCombinations, skipMissing=True):
             innerResult = []
             for attr in attrs:
                 innerResult.append(Convert.to_string(item[attr], True))
-            
+
             current_entry = Convert.to_md5_base64_encode(innerResult, True, True)
             if current_entry not in seen:
                 result.append(item)
                 seen.add(current_entry)
-           
+
     return result
 
 def unique_by_attribute(data, attribute):
@@ -175,13 +179,16 @@ def _unique_recursive(data, attribute, recurse=None):
     return unique_by_attribute(data, attribute)
 
 def unique_recursive(data, attributes, recurse=None):
+    if (Validate.isList(data) and len(data) == 0):
+        return data
+
     Validate.list_of_dicts(data, 'data')
-    
+
     if isinstance(attributes, str):
         attributes = [attributes]
     else:
         Validate.list(attributes, 'attributes')
-    
+
     for attr in attributes:
         data = _unique_recursive(data, attr, recurse)
 
@@ -195,7 +202,7 @@ def replace_aliases(data, attributes, overwrite=False, removeAliases=False):
     if isinstance(data, dict):
         data = [data]
         rtrDict = True
-    
+
     result = data.copy()
     for itemKey, item in enumerate(data):
         for attr, aliases in attributes.items():
