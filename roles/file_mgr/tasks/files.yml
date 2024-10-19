@@ -1,0 +1,44 @@
+---
+- name: Manage files and folders
+  block:
+    - name: "Ensure Directory Exists, if mkdir set - Index: {{ __fm_itm_ind }}"
+      become: "{{ __fm_itm.entry__become | default(true) }}"
+      ansible.builtin.file:
+        state: directory
+        recurse: true
+        path: "{{ __fm_itm.dest | dirname }}"
+      register: file_mgr__apply_mkdir
+      when: __fm_itm.entry__mkdir | default(false, true)
+
+    - name: "Copy file or directory - Index: {{ __fm_itm_ind }}"
+      become: "{{ __fm_itm.entry__become | default(true) }}"
+      ansible.builtin.copy: "{{ __fm_itm |
+        aybarsm.helper.only_with(__ansible.modules.ansible_builtin_copy.params) }}"
+      register: file_mgr__apply_copy
+      when: __fm_itm.entry__module | default('') == 'copy'
+
+    - name: "Manage file or directory - Index: {{ __fm_itm_ind }}"
+      become: "{{ __fm_itm.entry__become | default(true) }}"
+      ansible.builtin.file: "{{ __fm_itm |
+        aybarsm.helper.only_with(__ansible.modules.ansible_builtin_file.params) }}"
+      register: file_mgr__apply_file
+      when: __fm_itm.entry__module | default('') == 'file'
+
+    - name: "Manage template - Index: {{ __fm_itm_ind }}"
+      become: "{{ __fm_itm.entry__become | default(true) }}"
+      ansible.builtin.template: "{{ __fm_itm |
+        aybarsm.helper.only_with(__ansible.modules.ansible_builtin_template.params) }}"
+      register: file_mgr__apply_template
+      when: __fm_itm.entry__module | default('') == 'template'
+
+    - name: "Run handlers - Index: {{ __fm_itm_ind }}"
+      ansible.builtin.include_tasks: handlers.yml
+      loop: "{{ __fm_itm.entry__handlers }}"
+      loop_control:
+        loop_var: __fm_hnd
+        index_var: __fm_hnd_ind
+      when:
+        - __fm_itm.entry__handlers | default([]) | length > 0
+        - (__fm_itm.entry__module | default('') == 'copy' and file_mgr__apply_copy is changed) or
+          (__fm_itm.entry__module | default('') == 'file' and file_mgr__apply_file is changed) or
+          (__fm_itm.entry__module | default('') == 'template' and file_mgr__apply_template is changed)

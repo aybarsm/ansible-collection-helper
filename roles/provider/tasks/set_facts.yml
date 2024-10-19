@@ -1,0 +1,12 @@
+---
+- name: Ensure provider query is credible
+  ansible.builtin.assert:
+    that: __provider__info[provider__name] | community.general.json_query(provider__info_query) is not none
+    fail_msg: "Provider info query failed."
+    success_msg: "Provider info query succeeded."
+  register: provider__assert_provider_info_query
+
+- name: Set node/host specific provider info fact
+  ansible.builtin.set_fact:
+    provider__info: "{{ __provider__info[provider__name] | community.general.json_query(provider__info_query) }}"
+  when: provider__assert_provider_info_query is success

@@ -1,0 +1,6 @@
+---
+- name: Include Docker Network tasks
+  include_tasks: network.yml
+  when:
+    - docker__role_enabled | default(false) | bool
+    - docker__manage_network | default(false) | bool

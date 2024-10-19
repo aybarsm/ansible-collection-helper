@@ -1,5 +1,11 @@
 from __future__ import annotations
 from ..common.tools import Validate, Dict, Convert
+import os
+import shlex
+from ansible.module_utils.common.text.converters import to_text, to_native, to_bytes
+from ansible.module_utils.common.collections import is_iterable
+# from ansible.plugins.filter.mathstuff import intersect as ansible_intersect
+from ansible_collections.ansible.builtin.plugins.filter.core import combine as ansible_combine
 
 def only_with(data, attributes):
     """
@@ -14,14 +20,12 @@ def only_with(data, attributes):
     Validate.dict_or_list_of_dicts(data, 'data')
     Validate.list(attributes, 'attributes')
 
-    if isinstance(data, dict):
-        return Dict.only_with(data, attributes)
-    else:
-        result = []
-        for item in data:
-            result.append(Dict.only_with(item, attributes))
+    isDataDict = Validate.isDict(data)
 
-    return result
+    for itemKey, item in enumerate(Convert.wrapList(data)):
+        data[itemKey] = Dict.only_with(item, attributes)
+
+    return data[0] if isDataDict else data
 
 def all_except(data, attributes):
     """
@@ -36,14 +40,12 @@ def all_except(data, attributes):
     Validate.dict_or_list_of_dicts(data, 'data')
     Validate.list(attributes, 'attributes')
 
-    if isinstance(data, dict):
-        return Dict.all_except(data, attributes)
-    else:
-        result = []
-        for item in data:
-            result.append(Dict.all_except(item, attributes))
+    isDataDict = Validate.isDict(data)
 
-    return result
+    for itemKey, item in enumerate(Convert.wrapList(data)):
+        data[itemKey] = Dict.all_except(item, attributes)
+
+    return data[0] if isDataDict else data
 
 def to_querystring(data, keyAttr, valAttr=None, assignChar='=', joinChar='&', recurse=None, recurseIndentSteps=0, recurseIndentChar=' ', repeatJoinCharOnMainLevels=False):
     """
@@ -216,6 +218,55 @@ def replace_aliases(data, attributes, overwrite=False, removeAliases=False):
 
     return result[0] if rtrDict else result
 
+def remove_omitted(data):
+    """
+    Remove the omitted keys from a list.
+
+    Example Usage: "{{ data | remove_omitted() }}"
+    """
+    if (Validate.isList(data) and len(data) > 0):
+        for itemKey, item in enumerate(data):
+            if Validate.isString(item) and item.startswith('__omit_place_holder__'):
+                del data[itemKey]
+
+    return data
+
+def make_args(args):
+    """
+    """
+    if Validate.isList(args) and len(args) > 0:
+        args = remove_omitted(args)
+
+    if is_iterable(args, include_strings=False):
+        args = [to_native(arg, errors='surrogate_or_strict', nonstring='simplerepr') for arg in args]
+
+    # if isinstance(args, (bytes, str)):
+    #     args = shlex.split(to_text(args, errors='surrogateescape'))
+
+    # args = [to_bytes(os.path.expanduser(os.path.expandvars(x)), errors='surrogate_or_strict') for x in args if x is not None]
+
+    if isinstance(args, list):
+        args = b" ".join([to_bytes(shlex.quote(x), errors='surrogate_or_strict') for x in args])
+    else:
+        args = to_bytes(args, errors='surrogate_or_strict')
+
+    return args
+
+def combine_reverse(*terms, **kwargs):
+    """
+    Combine the provided dicts in reverse order.
+
+    Example Usage: "{{ data | aybarsm.helper.combine_reverse(dict1, dict2, dict3) }}"
+    """
+    terms_reversed = reversed(terms)
+    return ansible_combine(*terms_reversed, **kwargs)
+
+# def contains_all(data, values):
+#     if not Validate.isList(values):
+#         values = [values]
+
+#     return len(list(set(data) & set(values))) == len(values)
+
 class FilterModule(object):
     def filters(self):
         return {
@@ -226,4 +277,8 @@ class FilterModule(object):
             'to_list_of_dicts': to_list_of_dicts,
             'replace_aliases': replace_aliases,
             'unique_combinations': unique_combinations,
+            'remove_omitted': remove_omitted,
+            'make_args': make_args,
+            'combine_reverse': combine_reverse,
+            # 'contains_all': contains_all,
         }

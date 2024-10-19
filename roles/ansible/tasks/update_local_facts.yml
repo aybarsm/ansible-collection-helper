@@ -1,0 +1,34 @@
+---
+- name: Update local facts
+  block:
+    - name: Include local facts tasks
+      ansible.builtin.include_tasks:
+        file: local_facts.yml
+      when: ansible__ensure_local_facts_dir is undefined
+
+    - name: Settle updated local facts on the host
+      become: true
+      ansible.builtin.template:
+        src: "{{ ansible__local_fact_template }}"
+        dest: "{{ ansible__local_fact_file }}"
+        backup: "{{ ansible__local_fact_backup | default(omit) }}"
+      vars:
+        recurse_strategy: "{{ ansible__local_fact_combine_recursive | default(true) | bool }}"
+        list_merge_strategy: "{{ ansible__local_fact_combine_list_merge | default('prepend') }}"
+        host_local_facts: "{{ ansible_local[ansible__local_fact_name] | default({'created_at': now().utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')}) |
+          combine(ansible__local_fact_updates, {'updated_at': now().utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')}, recursive=recurse_strategy, list_merge=list_merge_strategy) }}"
+      register: ansible__settle_local_facts
+      when:
+        - ansible__local_fact_updates | default({}) | type_debug == 'dict'
+        - ansible__local_fact_updates.keys() | default([]) | list | length > 0
+
+    - name: Re-read updated local facts on the host
+      become: true
+      ansible.builtin.setup:
+        filter: ansible_local
+      register: ansible__reread_local_facts
+      when: ansible__settle_local_facts.changed | default(false)
+
+  when:
+    - ansible__role_enabled | default(false) | bool
+    - ansible__manage_local_facts | default(false) | bool

@@ -1,2 +1,13 @@
 ---
+##### BEGIN: provider per host/node configuration
 provider__role_enabled: false
+
+# Manage cloud-init
+provider__manage_ci: false
+
+provider__name: ''
+provider__info_query: ''
+
+# Generates /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+provider__ci_network_config_disabled: false
+##### BEGIN: provider per host/node configuration

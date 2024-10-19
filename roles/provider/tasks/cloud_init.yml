@@ -1,0 +1,16 @@
+---
+- name: Disable cloud-init network configuration
+  become: true
+  ansible.builtin.copy:
+    content: 'network: {config: disabled}'
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+  register: provider__ci_network_config_disable
+  when: provider__ci_network_config_disabled | default(false) | bool
+
+- name: Ensure cloud-init network configuration not disabled
+  become: true
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    state: absent
+  register: provider__ci_network_config_enable
+  when: not provider__ci_network_config_disabled | default(false) | bool

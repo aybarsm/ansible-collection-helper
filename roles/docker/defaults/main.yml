@@ -1,0 +1,18 @@
+---
+docker__role_enabled: false
+
+docker__manage_daemon_config: false
+docker__manage_network: false
+
+# Daemon configuration will be structured and passed to geerlingguy.docker role as docker_daemon_options variable
+# Merge daemon config from host, group and default
+docker__daemon_config_merge: ['host', 'group', 'default']
+docker__daemon_config_merge_recursive: true
+docker__daemon_config_merge_list: 'replace'
+docker__daemon_config_file: /etc/docker/daemon.json
+docker__daemon_config_template: etc/docker/daemon.json.j2
+docker__daemon_config_backup: true
+
+docker__host: []
+docker__group: []
+docker__default: []

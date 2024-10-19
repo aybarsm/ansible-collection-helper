@@ -1,0 +1,8 @@
+{{ ansible_managed | comment }}
+
+{% if consul__systemd_override | default({}, true) | length > 0 %}
+{%  for section, values in consul__systemd_override.items() %}
+{{ '[' + (section | trim('[]') | title) + ']' }}
+{{ values | aybarsm.helper.to_querystring('name', 'value', '=', '\n') }}
+{%  endfor %}
+{% endif %}

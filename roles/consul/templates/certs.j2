@@ -1,0 +1,24 @@
+{% set agent_role = 'server' if consul__config.server | default(false) else 'client'  %}
+{% set agent = consul__cluster | selectattr(agent_role + 's', 'contains', inventory_hostname) | first | default({}, true) %}
+{% if agent.keys() > 0 %}
+{% set dir_sep_local = '/' if consul__certs_src_dir.startswith('/') else '\\' %}
+{% set dir_sep_remote = '\\' if ansible_facts['os_family'] == 'Windows' else '/' %}
+{%  set certs = [{
+    'content': lookup('file', consul__certs_src_dir + dir_sep_local + 'consul-agent-ca.pem'),
+    'dest': consul__certs_dest_dir + dir_sep_remote + 'consul-agent-ca.pem'
+}] %}
+{%  set config = {
+    'ca_file': consul__certs_dest_dir + dir_sep_remote + 'consul-agent-ca.pem'
+} %}
+{%  for key, ext in {'cert_file': '.pem', 'key_file': '-key.pem'}.items() %}
+{%      set cert_file = ([agent.datacenter, agent_role , 'consul', agent[agent_role + '_tls_index']] | join('-')) + ext %}
+{%      set cert_src = consul__certs_src_dir + dir_sep_local + cert_file %}
+{%      set cert_dest = consul__certs_dest_dir + dir_sep_remote + cert_file %}
+{%      set certs = certs.append({
+    'content': lookup('file', cert_src),
+    'dest': cert_dest
+}) %}
+{%      set config = config | combine({key: cert_dest}) %}
+{%  endfor %}
+{% endif %}
+{{ {'config': {'tls': {'defaults': config}}, 'certs': (certs | map('combine', {'entry__type': 'cert'}))} }}

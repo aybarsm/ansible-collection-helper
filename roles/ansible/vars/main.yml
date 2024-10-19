@@ -1,0 +1,126 @@
+ansible__local_fact_name: "{{ ansible__local_fact_file | basename | regex_replace('\\.fact$','') }}"
+
+__ansible:
+  modules:
+    community_docker_docker_network:
+      required: ['name']
+      uniques: ['name']
+      aliases:
+        api_version: ['api_version']
+        appends: ['incrementals']
+        ca_cert: ['ca_cert', 'tls_ca_cert', 'cacert_path']
+        client_cert: ['tls_client_cert', 'cert_path']
+        client_key: ['tls_client_key', 'key_path']
+        connected: ['containers']
+        docker_host: ['docker_url']
+        name: ['network_name']
+        validate_certs: ['tls_verify']
+      params: ['api_version', 'docker_api_version', 'appends', 'incremental', 'attachable', 'ca_path', 'ca_cert', 'tls_ca_cert', 'cacert_path',
+        'client_cert', 'tls_client_cert', 'cert_path', 'client_key', 'tls_client_key', 'key_path', 'config_from', 'config_only', 'connected', 'containers',
+        'debug', 'docker_host', 'docker_url', 'driver', 'driver_options', 'enable_ipv6', 'force', 'internal', 'ipam_config', 'ipam_driver',
+        'labels', 'name', 'network_name', 'scope', 'ssl_version', 'state', 'timeout', 'tls', 'tls_hostname', 'use_ssh_client', 'validate_certs', 'tls_verify']
+    ansible_builtin_template:
+      uniques: ['dest']
+      aliases:
+        attributes: ['attr']
+      params: ['attributes', 'attr', 'backup', 'block_end_string', 'block_start_string',
+        'comment_end_string', 'comment_start_string', 'dest', 'follow', 'force', 'group',
+        'lstrip_blocks', 'mode', 'newline_sequence', 'output_encoding', 'owner',
+        'selevel', 'serole', 'setype', 'seuser', 'src', 'trim_blocks', 'unsafe_writes',
+        'validate', 'variable_end_string', 'variable_start_string']
+    ansible_builtin_copy:
+      uniques: ['dest']
+      aliases:
+        attributes: ['attr']
+      params: ['attributes', 'attr', 'backup', 'checksum', 'content', 'decrypt', 'dest', 'directory_mode', 'follow',
+        'force', 'group', 'local_follow', 'mode', 'owner', 'remote_src', 'selevel', 'serole', 'setype', 'seuser',
+        'src', 'unsafe_writes', 'validate']
+    ansible_builtin_file:
+      required: ['path']
+      uniques: ['dest']
+      aliases:
+        attributes: ['attr']
+        path: ['dest', 'name']
+      params: ['access_time', 'access_time_format', 'attributes', 'attr', 'follow', 'force', 'group', 'mode', 'modification_time',
+        'modification_time_format', 'owner', 'path', 'dest', 'name', 'recurse', 'selevel', 'serole', 'setype', 'seuser',
+        'src', 'state', 'unsafe_writes']
+    ansible_builtin_user:
+      required: ['name']
+      uniques: ['name']
+      aliases:
+        create_home: ['createhome']
+        name: ['user']
+    ansible_builtin_group:
+      uniques: ['name']
+    ansible_builtin_systemd_service:
+      required: ['name']
+      uniques: ['name']
+      aliases:
+        daemon_reexec: ['daemon-reexec']
+        daemon_reload: ['daemon-reload']
+        name: ['service', 'unit']
+      params: ['daemon_reexec', 'daemon-reexec', 'daemon_reload', 'daemon-reload', 'name', 'service', 'unit', 'no_block', 'scope', 'state']
+    ansible_builtin_service:
+      required: ['name']
+      uniques: ['name']
+      aliases:
+        arguments: ['args']
+      params: ['arguments', 'args', 'enabled', 'name', 'pattern', 'runlevel', 'sleep', 'state', 'use']
+    ansible_builtin_command:
+      required: []
+      uniques: []
+      aliases: {}
+      params: ['argv', 'chdir', 'cmd', 'creates', 'expand_argument_vars', 'free_form', 'removes', 'stdin', 'stdin_add_newline', 'strip_empty_ends']
+    ansible_builtin_apt:
+      uniques: ['name']
+      aliases:
+        allow_downgrade: ['allow-downgrade', 'allow_downgrades', 'allow-downgrades']
+        allow_unauthenticated: ['allow-unauthenticated']
+        default_release: ['default-release']
+        install_recommends: ['install-recommends']
+        name: ['package', 'pkg']
+        update_cache: ['update-cache']
+    ansible_builtin_apt_repository:
+      uniques: ['repo']
+      aliases:
+        update_cache: ['update-cache']
+    ansible_builtin_apt_key:
+      uniques: ['keyserver', 'url', 'id', 'file' ,'data']
+      aliases: {}
+    ansible_builtin_find:
+      required: ['paths']
+      aliases:
+        excludes: ['exclude']
+        paths: ['name', 'path']
+        patterns: ['pattern']
+    ansible_builtin_dnf:
+      uniques: ['name']
+      aliases:
+        allow_downgrade: ['allow-downgrade', 'allow_downgrades', 'allow-downgrades']
+        allow_unauthenticated: ['allow-unauthenticated']
+        default_release: ['default-release']
+        install_recommends: ['install-recommends']
+        name: ['package', 'pkg']
+    ansible_builtin_yum_repository:
+      uniques: ['name']
+      aliases:
+        attributes: ['attr']
+        sslcacert: ['ca_cert']
+        sslclientcert: ['client_cert']
+        sslclientkey: ['client_key']
+        sslverify: ['validate_certs']
+    ansible_builtin_add_host:
+      uniques: ['name']
+      aliases:
+        groups: ['group', 'groupname']
+        name: ['host','hostname']
+    ansible_posix_authorized_key:
+      required: ['user', 'key']
+    ansible_posix_sysctl:
+      required: ['name', 'value']
+      aliases:
+        name: ['key']
+        value: ['val']
+    community_general_sudoers:
+      required: ['name']
+      uniques: ['name']

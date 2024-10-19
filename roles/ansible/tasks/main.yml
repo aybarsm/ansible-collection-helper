@@ -1,0 +1,7 @@
+---
+- name: Include local facts tasks
+  ansible.builtin.include_tasks:
+    file: local_facts.yml
+  when:
+    - ansible__role_enabled | default(false) | bool
+    - ansible__manage_local_facts | default(false) | bool

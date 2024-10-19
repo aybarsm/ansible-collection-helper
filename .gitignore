@@ -5,6 +5,7 @@ tests/output/
 *.bak*/
 .vscode/
 .idea/
+roles/debug/
 
 # General
 .DS_Store

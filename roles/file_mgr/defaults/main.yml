@@ -1,0 +1,9 @@
+---
+file_mgr__role_enabled: false
+
+# Discard entries from default, groups or host
+file_mgr__discard: []
+
+file_mgr__host: []
+file_mgr__group: []
+file_mgr__default: []

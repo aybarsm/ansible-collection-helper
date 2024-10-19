@@ -1,0 +1,20 @@
+---
+- name: Handle file or directory changes
+  block:
+    - name: "Apply file or directory changes via systemd service module - Index: {{ __fm_itm_ind }}/{{ __fm_hnd_ind }}"
+      become: true
+      ansible.builtin.systemd_service: "{{ __fm_hnd |
+        aybarsm.helper.only_with(__ansible.modules.ansible_builtin_systemd_service.params) }}"
+      when: __fm_hnd.entry__module | default('') == 'systemd_service'
+
+    - name: "Apply file or directory changes via service module - Index: {{ __fm_itm_ind }}/{{ __fm_hnd_ind }}"
+      become: true
+      ansible.builtin.service: "{{ __fm_hnd |
+        aybarsm.helper.only_with(__ansible.modules.ansible_builtin_systemd_service.params) }}"
+      when: __fm_hnd.entry__module | default('') == 'service'
+
+    - name: "Apply file or directory changes via command module - Index: {{ __fm_itm_ind }}/{{ __fm_hnd_ind }}"
+      become: "{{ __fm_hnd.entry__become | default(true) }}"
+      ansible.builtin.command: "{{ __fm_hnd |
+        aybarsm.helper.only_with(__ansible.modules.ansible_builtin_command.params) }}"
+      when: __fm_hnd.entry__module | default('') == 'command'

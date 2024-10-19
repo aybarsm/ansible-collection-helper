@@ -1,7 +1,13 @@
 from ansible.errors import AnsibleFilterError
+from ansible.plugins.test.core import TestModule as AnsibleTestModule
 import hashlib
 import base64
 import json
+
+class AnsTest:
+    @staticmethod
+    def isTruthy(*args, **kwargs):
+        return AnsibleTestModule.tests['truthy'](*args, **kwargs)
 
 class Validate:
     @staticmethod
@@ -247,3 +253,7 @@ class Convert:
             data = Convert.to_string(data, trim)
 
         return Convert.to_base64_encode(Convert.to_md5(data))
+
+    @staticmethod
+    def wrapList(data):
+        return data if isinstance(data, list) else [data]

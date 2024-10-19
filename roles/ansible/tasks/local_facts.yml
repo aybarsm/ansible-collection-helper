@@ -1,0 +1,8 @@
+---
+- name: Ensure ansible local facts directory exists on host
+  become: true
+  ansible.builtin.file:
+    state: directory
+    recurse: true
+    path: "{{ ansible__local_facts_dir }}"
+  register: ansible__ensure_local_facts_dir

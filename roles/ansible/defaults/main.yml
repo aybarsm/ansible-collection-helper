@@ -1,0 +1,9 @@
+ansible__role_enabled: true
+ansible__manage_local_facts: true
+
+ansible__local_fact_backup: true
+ansible__local_facts_dir: "{{ (not lookup('config', 'DEFAULT_FACT_PATH')) | ternary('/etc/ansible/facts.d', lookup('config', 'DEFAULT_FACT_PATH')) }}"
+ansible__local_fact_file: "{{ ansible__local_facts_dir }}/ansible.fact"
+ansible__local_fact_template: etc/ansible/facts.d/ansible.json.fact.j2
+ansible__local_fact_combine_recursive: true
+ansible__local_fact_combine_list_merge: prepend

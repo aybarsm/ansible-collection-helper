@@ -1,0 +1,72 @@
+---
+consul__role_enabled: false
+
+consul__os_user: consul
+consul__os_group: consul
+
+consul__bin_path: /usr/bin/consul
+consul__systemd_unit_path: /etc/systemd/system/consul.service
+consul__systemd_unit_template: etc/systemd/system/consul.service.j2
+consul__systemd_override_path: /etc/systemd/system/consul.service.d/override.conf
+consul__systemd_override_template: etc/systemd/system/consul.service.d/override.conf.j2
+consul__env_path: /etc/consul.d/consul.env
+
+consul__config_dir: /etc/consul.d
+consul__config_path: "{{ consul__config_dir }}/config.json"
+consul__config_template: etc/consul.d/config.json.j2
+
+consul__certs_dest_dir: "{{ consul__config_dir }}/certs"
+consul__certs_src_dir: "{{ inventory_dir }}/files"
+# consul__certs_template: "{{ role_path }}/templates/certs.j2"
+consul__certs_auto_build: false
+consul__certs_auto_build_template: "{{ lookup('ansible.builtin.first_found', 'certs.j2', paths=['../'], skip=True) }}"
+
+consul__env_export: false
+consul__env_export_path: /root/.bash_profile
+consul__env_export_content: |
+  set -o allexport
+  source "{{ consul__env_path }}"
+  set +o allexport
+
+# consul__env_vars:
+#   CONSUL_HTTP_ADDR: ['addresses.http']
+#   CONSUL_HTTP_TOKEN: []
+#   CONSUL_HTTP_TOKEN_FILE: "{{ omit }}"
+#   CONSUL_HTTP_AUTH: "{{ omit }}"
+#   CONSUL_HTTP_SSL: "{{ omit }}"
+#   CONSUL_HTTP_SSL_VERIFY: "{{ omit }}"
+#   CONSUL_CACERT: "{{ omit }}"
+#   CONSUL_CAPATH: "{{ omit }}"
+#   CONSUL_CLIENT_CERT: "{{ omit }}"
+#   CONSUL_CLIENT_KEY: "{{ omit }}"
+#   CONSUL_TLS_SERVER_NAME: "{{ omit }}"
+#   CONSUL_GRPC_ADDR: "{{ omit }}"
+#   CONSUL_GRPC_ADDR: "{{ omit }}"
+#   CONSUL_NAMESPACE: "{{ omit }}"
+
+##### BEGIN: aybarsm.helper.consul shared configuration
+# Cluster configuration
+# For target inventory specs, consult https://docs.ansible.com/ansible/latest/inventory_guide/intro_patterns.html for more information
+# consul__cluster variables has been designed to be managed from a single source of truth, i.e. group_vars/all.yml However, it can be overwritten from the host vars.
+# consul__cluster:
+#   - datacenter: 'dc1'
+#     servers: "{{ lookup('ansible.builtin.inventory_hostnames', 'consul_server:&london') | split(',') }}"
+#     server_tls_index: 0
+#     clients: "{{ lookup('ansible.builtin.inventory_hostnames', 'consul_agent:&london') | split(',') }}"
+#     client_tls_index: 0
+consul__cluster: []
+
+# consul__all is the final list
+# consult with vars/main.yml for more details
+consul__default: []
+consul__group: []
+consul__host: []
+
+# Example consul
+
+# consul__config is the final configuration dictionary
+# consult with vars/main.yml for more details
+consul__config_default: {}
+consul__config_group: {}
+consul__config_host: {}
+##### BEGIN: aybarsm.helper.consul shared configuration

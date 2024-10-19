@@ -1,0 +1,17 @@
+---
+docker__all: "{{ ((docker__host | map('combine', {'src__entry': 'host'})) +
+  (docker__group | map('combine', {'src__entry': 'group'})) +
+  (docker__default | map('combine', {'src__entry': 'default'}))) |
+  map('aybarsm.helper.combine_reverse', {'keep__entry': true, 'skip__entry': false}) |
+  rejectattr('keep__entry', 'eq', false) | rejectattr('skip__entry', 'eq', true) | rejectattr('type', 'undefined') |
+  aybarsm.helper.all_except(['keep__entry', 'skip__entry']) }}"
+
+docker_daemon_options: "{{ (docker__all | selectattr('src__entry', 'in', docker__daemon_config_merge) |
+  selectattr('type', 'eq', 'daemon_config') | selectattr('config', 'defined') | default([{'config': {}}]) |
+  map(attribute='config') | combine(recursive=(docker__daemon_config_merge_recursive | bool), list_merge=docker__daemon_config_merge_list))
+  if ((docker__role_enabled | bool) and (docker__manage_daemon_config | bool)) else {} }}"
+
+docker__network: "{{ docker__all | reverse | selectattr('type', 'eq', 'network') |
+  aybarsm.helper.replace_aliases(__ansible.modules.community_docker_docker_network.aliases) |
+  selectattr('name', 'defined') | community.general.lists_mergeby('name', recursive=true, list_merge='prepend') |
+  unique(attribute='name') }}"

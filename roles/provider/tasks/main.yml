@@ -4,3 +4,16 @@
   when:
     - provider__role_enabled
     - provider__name | default('') == 'hcloud'
+
+- name: Include set facts tasks
+  include_tasks: set_facts.yml
+  when:
+    - provider__role_enabled
+    - provider__info_query | default(undef(), true) is not undefined
+    - __provider__info[provider__name] is defined
+
+- name: Include cloud-init tasks
+  include_tasks: cloud_init.yml
+  when:
+    - provider__role_enabled
+    - provider__manage_ci | default(false) | bool

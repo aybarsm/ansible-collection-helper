@@ -1,0 +1,10 @@
+---
+- name: Include file and directory management tasks
+  ansible.builtin.include_tasks: files.yml
+  loop: "{{ file_mgr__all }}"
+  loop_control:
+    loop_var: __fm_itm
+    index_var: __fm_itm_ind
+  when:
+    - file_mgr__role_enabled | default(false) | bool
+    - file_mgr__all | default([]) | length > 0
