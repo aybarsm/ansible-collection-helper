@@ -5,4 +5,7 @@
     state: directory
     recurse: true
     path: "{{ ansible__local_facts_dir }}"
+    owner: "{{ ansible__local_facts_dir_owner | default(omit, true) }}"
+    group: "{{ ansible__local_facts_dir_group | default(omit, true) }}"
+    mode: "{{ ansible__local_facts_dir_mode | default(omit, true) }}"
   register: ansible__ensure_local_facts_dir

@@ -1,0 +1,28 @@
+- name: Run Git Task
+  ansible.builtin.git:
+    accept_hostkey: "{{ misc__git.accept_hostkey | default(omit) }}"
+    accept_newhostkey: "{{ misc__git.accept_newhostkey | default(omit) }}"
+    archive: "{{ misc__git.archive | default(omit) }}"
+    archive_prefix: "{{ misc__git.archive_prefix | default(omit) }}"
+    bare: "{{ misc__git.bare | default(omit) }}"
+    clone: "{{ misc__git.clone | default(omit) }}"
+    depth: "{{ misc__git.depth | default(omit) }}"
+    dest: "{{ misc__git.dest }}"
+    force: "{{ misc__git.force | default(omit) }}"
+    gpg_allowlist: "{{ misc__git.gpg_allowlist | default(omit) }}"
+    key_file: "{{ misc__git.key_file | default(omit) }}"
+    recursive: "{{ misc__git['recursive'] | default(omit) }}"
+    reference: "{{ misc__git.reference | default(omit) }}"
+    refspec: "{{ misc__git.refspec | default(omit) }}"
+    remote: "{{ misc__git.remote | default(omit) }}"
+    repo: "{{ misc__git.repo }}"
+    separate_git_dir: "{{ misc__git.separate_git_dir | default(omit) }}"
+    single_branch: "{{ misc__git.single_branch | default(omit) }}"
+    ssh_opts: "{{ misc__git.ssh_opts | default(omit) }}"
+    track_submodules: "{{ misc__git.track_submodules | default(omit) }}"
+    umask: "{{ misc__git.umask | default(omit) }}"
+    # Update is an ansible built-in function for dicts...
+    update: "{{ omit if misc__git is not contains('update') else misc__git['update'] }}"
+    verify_commit: "{{ misc__git.verify_commit | default(omit) }}"
+    version: "{{ misc__git.version | default(omit) }}"
+  register: misc__apply_git

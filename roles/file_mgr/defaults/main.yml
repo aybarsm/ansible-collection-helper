@@ -1,8 +1,8 @@
 ---
 file_mgr__role_enabled: false
 
-# Discard entries from default, groups or host
-file_mgr__discard: []
+file_mgr__no_log: true
+file_mgr__use_only: ['host', 'group', 'default']
 
 file_mgr__host: []
 file_mgr__group: []

@@ -7,3 +7,7 @@ ansible__local_fact_file: "{{ ansible__local_facts_dir }}/ansible.fact"
 ansible__local_fact_template: etc/ansible/facts.d/ansible.json.fact.j2
 ansible__local_fact_combine_recursive: true
 ansible__local_fact_combine_list_merge: prepend
+
+# ansible__local_facts_dir_owner: root
+# ansible__local_facts_dir_group: root
+# ansible__local_facts_dir_mode: '0755'

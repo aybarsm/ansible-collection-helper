@@ -3,42 +3,59 @@
   block:
     - name: "Ensure Directory Exists, if mkdir set - Index: {{ __fm_itm_ind }}"
       become: "{{ __fm_itm.entry__become | default(true) }}"
-      ansible.builtin.file:
-        state: directory
-        recurse: true
-        path: "{{ __fm_itm.dest | dirname }}"
+      ansible.builtin.file: "{{ __fm_itm.entry__mkdir |
+        aybarsm.helper.only_with(__ansible.modules.ansible_builtin_file.params) |
+        combine({'state': 'directory', 'recurse': true, 'path': (__fm_itm.dest | dirname)}) }}"
       register: file_mgr__apply_mkdir
-      when: __fm_itm.entry__mkdir | default(false, true)
+      when:
+        - __fm_itm.entry__mkdir is defined
+        - __fm_itm.entry__mkdir | type_debug == 'dict'
 
-    - name: "Copy file or directory - Index: {{ __fm_itm_ind }}"
+    - name: "File Mgr - Module :: Copy - Index: {{ __fm_itm_ind }}"
       become: "{{ __fm_itm.entry__become | default(true) }}"
       ansible.builtin.copy: "{{ __fm_itm |
         aybarsm.helper.only_with(__ansible.modules.ansible_builtin_copy.params) }}"
       register: file_mgr__apply_copy
-      when: __fm_itm.entry__module | default('') == 'copy'
+      when: __fm_itm.entry__type | default('') == 'copy'
 
-    - name: "Manage file or directory - Index: {{ __fm_itm_ind }}"
+    - name: "File Mgr - Module :: File - Index: {{ __fm_itm_ind }}"
       become: "{{ __fm_itm.entry__become | default(true) }}"
       ansible.builtin.file: "{{ __fm_itm |
         aybarsm.helper.only_with(__ansible.modules.ansible_builtin_file.params) }}"
       register: file_mgr__apply_file
-      when: __fm_itm.entry__module | default('') == 'file'
+      when: __fm_itm.entry__type | default('') == 'file'
 
-    - name: "Manage template - Index: {{ __fm_itm_ind }}"
+    - name: "File Mgr - Module : Template - Index: {{ __fm_itm_ind }}"
       become: "{{ __fm_itm.entry__become | default(true) }}"
       ansible.builtin.template: "{{ __fm_itm |
         aybarsm.helper.only_with(__ansible.modules.ansible_builtin_template.params) }}"
       register: file_mgr__apply_template
-      when: __fm_itm.entry__module | default('') == 'template'
+      when: __fm_itm.entry__type | default('') == 'template'
+    
+    - name: "File Mgr - Module : Patch: {{ __fm_itm_ind }}"
+      become: "{{ __fm_itm.entry__become | default(true) }}"
+      ansible.posix.patch: "{{ __fm_itm |
+        aybarsm.helper.only_with(__ansible.modules.ansible_posix_patch.params) }}"
+      register: file_mgr__apply_patch
+      when: __fm_itm.entry__type | default('') == 'patch'
+    
+    - name: Set Results Fact
+      ansible.builtin.set_fact:
+        file_mgr__items: "{{ file_mgr__items | aybarsm.helper.role_item_result(__fm_itm_ind, is_changed, file_mgr__handlers) }}"
+      vars:
+        is_changed: "{{ (__fm_itm.entry__type | default('') == 'copy' and file_mgr__apply_copy is changed) or
+          (__fm_itm.entry__type | default('') == 'file' and file_mgr__apply_file is changed) or
+          (__fm_itm.entry__type | default('') == 'template' and file_mgr__apply_template is changed) or
+          (__fm_itm.entry__type | default('') == 'patch' and file_mgr__apply_patch is changed) }}"
 
     - name: "Run handlers - Index: {{ __fm_itm_ind }}"
       ansible.builtin.include_tasks: handlers.yml
-      loop: "{{ __fm_itm.entry__handlers }}"
+      loop: "{{ item_handler.handlers }}"
       loop_control:
         loop_var: __fm_hnd
         index_var: __fm_hnd_ind
+      vars:
+        item_handler: "{{ file_mgr__handlers | selectattr('name', 'eq', __fm_itm.entry__handlers) | first | default([]) }}"
       when:
-        - __fm_itm.entry__handlers | default([]) | length > 0
-        - (__fm_itm.entry__module | default('') == 'copy' and file_mgr__apply_copy is changed) or
-          (__fm_itm.entry__module | default('') == 'file' and file_mgr__apply_file is changed) or
-          (__fm_itm.entry__module | default('') == 'template' and file_mgr__apply_template is changed)
+        - file_mgr__items[__fm_itm_ind].entry__exec_handlers
+        - item_handler.handlers | default([]) | length > 0

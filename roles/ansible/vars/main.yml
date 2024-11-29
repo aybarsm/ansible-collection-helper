@@ -124,3 +124,18 @@ __ansible:
     community_general_sudoers:
       required: ['name']
       uniques: ['name']
+    community_general_proxmox_kvm:
+      required: ['api_host', 'api_user']
+      uniques: []
+    community_general_proxmox_nic:
+      required: ['api_host', 'api_user', 'interface']
+      uniques: []
+    community_general_proxmox_disk:
+      required: ['api_host', 'api_user', 'disk']
+      uniques: []
+    ansible_posix_patch:
+      required: ['src']
+      aliases:
+        dest: ['originalfile']
+        src: ['patchfile']
+      params: ['backup', 'basedir', 'binary', 'dest', 'ignore_whitespace', 'remote_src', 'src', 'state', 'strip']

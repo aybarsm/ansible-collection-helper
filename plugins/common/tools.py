@@ -27,6 +27,26 @@ class Validate:
         return isinstance(data, str)
 
     @staticmethod
+    def isInt(data):
+        return isinstance(data, int)
+    
+    @staticmethod
+    def isFloat(data):
+        return isinstance(data, float)
+    
+    @staticmethod
+    def isBool(data):
+        return isinstance(data, bool)
+    
+    @staticmethod
+    def isNone(data):
+        return data is None
+    
+    @staticmethod
+    def isCallable(data):
+        return callable(data)
+
+    @staticmethod
     def isListOfDicts(data):
         return Validate.isList(data) and all(Validate.isDict(item) for item in data)
 
@@ -39,13 +59,17 @@ class Validate:
         return Validate.isList(data) and all(Validate.isTuple(item) for item in data)
 
     @staticmethod
+    def isDictOfLists(data):
+        return Validate.isDict(data) and all(Validate.isList(item) for item in data.values())
+
+    @staticmethod
     def list(data, attrName):
         if not Validate.isList(data):
             raise AnsibleFilterError(f"{attrName} should be list")
 
     @staticmethod
     def tuple(data, attrName):
-        if not Validate.isList(data):
+        if not Validate.isTuple(data):
             raise AnsibleFilterError(f"{attrName} should be tuple")
 
     @staticmethod
@@ -87,7 +111,65 @@ class Validate:
     def list_of_lists_or_tuples(data, attrName):
         if not (Validate.isList(data) and all(Validate.isList(item) or Validate.isTuple(item) for item in data)):
             raise AnsibleFilterError(f"{attrName} should be list of lists or tuples")
+    
+    @staticmethod
+    def dict_or_list(data, attrName):
+        if not (Validate.isDict(data) or Validate.isList(data)):
+            raise AnsibleFilterError(f"{attrName} should be dictionary or list")
+    
+    @staticmethod
+    def dict_or_list_or_tuple(data, attrName):
+        if not (Validate.isDict(data) or Validate.isList(data) or Validate.isTuple(data)):
+            raise AnsibleFilterError(f"{attrName} should be dictionary or list or tuple")
+    
+    @staticmethod
+    def require(required, data, forAll = True, attrName = ''):
+        if not (Validate.isList(required) or Validate.isString(required) or Validate.isTuple(required)):
+            raise AnsibleFilterError("Validate.require, required should be list, tuple or string")
 
+        if Validate.isString(required):
+            required = [required]
+        
+        results = []
+        for req in required:
+            req = req.lower().replace('_', '').replace('-', '')
+
+            match req:
+                case 'list':
+                    results.append(Validate.isList(data))
+                case 'tuple':
+                    results.append(Validate.isTuple(data))
+                case 'dict':
+                    results.append(Validate.isDict(data))
+                case 'string':
+                    results.append(Validate.isString(data))
+                case 'int' | 'integer':
+                    results.append(Validate.isInt(data))
+                case 'float':
+                    results.append(Validate.isFloat(data))
+                case 'bool' | 'boolean':
+                    results.append(Validate.isBool(data))
+                case 'none':
+                    results.append(Validate.isNone(data))
+                case 'listoflists' | 'listoflist':
+                    results.append(Validate.isListofLists(data))
+                case 'listofdicts' | 'listofdict':
+                    results.append(Validate.isListOfDicts(data))
+                case 'listoftuples' | 'listoftuple':
+                    results.append(Validate.isLisOfTuples(data))
+                case 'dictoflists' | 'dictoflist':
+                    results.append(Validate.isDictOfLists(data))
+                case _:
+                    raise AnsibleFilterError(f"Validate.require, {req} is not a valid type to check.")
+        
+            if forAll and any(results):
+                return True
+        
+        if attrName != '' and (forAll or not all(results)):
+            raise AnsibleFilterError(f"{attrName} should be {', '.join(required)}")
+        
+        return all(results)
+        
 class JinjaEnv:
     def __init__(self, jinja_env):
         self.jinja_env = jinja_env
@@ -179,6 +261,41 @@ class Dict:
     @staticmethod
     def filter(dict_data, callback):
         return {key: value for key, value in dict_data.items() if callback(key, value)}
+    
+    @staticmethod
+    def _contains_flex(data, search, isAny = True):
+        def has_item(item, lookup):
+            return all(item.get(k) == v for k, v in lookup.items())
+        
+        if Validate.isListOfDicts(data):
+            return any(has_item(item, search) for item in data) if isAny else all(has_item(item, search) for item in data)
+        else:
+            return has_item(data, search)
+    
+    @staticmethod
+    def contains(data, search):
+        return Dict._contains_flex(data, search)
+    
+    @staticmethod
+    def allContains(data, search):
+        return Dict._contains_flex(data, search, False)
+
+    @staticmethod
+    def where(data, search):
+        isDataDict = Validate.isDict(data)
+        data = Convert.wrapList(data)
+
+        result = [item for item in data if Dict.contains(item, search)]
+
+        if isDataDict:
+            return result[0] if result else {}
+        else:
+            return result
+    
+    @staticmethod
+    def firstWhere(data, search, default = None):
+        result = Dict.where(data, search)
+        return result[0] if result else default
 
     @staticmethod
     def only_with(dict_data, attributes):

@@ -1,6 +1,5 @@
 from __future__ import annotations
 from ..common.tools import Validate, Dict, Convert
-import os
 import shlex
 from ansible.module_utils.common.text.converters import to_text, to_native, to_bytes
 from ansible.module_utils.common.collections import is_iterable
@@ -261,11 +260,49 @@ def combine_reverse(*terms, **kwargs):
     terms_reversed = reversed(terms)
     return ansible_combine(*terms_reversed, **kwargs)
 
-# def contains_all(data, values):
-#     if not Validate.isList(values):
-#         values = [values]
+def combine_key(data, key, *terms, **kwargs):
+    """
+    Combine the dict with the provided key in a list of dictionaries with the provided dicts.
 
-#     return len(list(set(data) & set(values))) == len(values)
+    Example Usage: "{{ data | combine_key('key', dict1, dict2, dict3) }}"
+    """
+    Validate.list_of_dicts(data, 'data')
+
+    terms_new = [data[key]] + list(terms)
+    data[key] = ansible_combine(*terms_new, **kwargs)
+
+    return data
+
+def combine_last(data, *terms, **kwargs):
+    """
+    Combine the last dict in a list of dictionaries with the provided dicts.
+
+    Example Usage: "{{ data | combine_last(dict1, dict2, dict3) }}"
+    """
+    return combine_key(data, -1, *terms, **kwargs)
+
+def combine_first(data, *terms, **kwargs):
+    """
+    Combine the first dict in a list of dictionaries with the provided dicts.
+
+    Example Usage: "{{ data | combine_first(dict1, dict2, dict3) }}"
+    """
+    return combine_key(data, 0, *terms, **kwargs)
+
+def update_key(data, key, value):
+    """
+    Update the key in a list or dictionary with the provided value.
+
+    Example Usage: "{{ data | update_key('key', 'value') }}"
+    """
+    Validate.require(['list', 'tuple', 'dict'], data, 'data')
+
+    if (Validate.isTuple(data)):
+        data = list(data)
+
+    data[key] = value
+
+    return data
 
 class FilterModule(object):
     def filters(self):
@@ -280,5 +317,8 @@ class FilterModule(object):
             'remove_omitted': remove_omitted,
             'make_args': make_args,
             'combine_reverse': combine_reverse,
-            # 'contains_all': contains_all,
+            'combine_key': combine_key,
+            'combine_last': combine_last,
+            'combine_first': combine_first,
+            'update_key': update_key,
         }

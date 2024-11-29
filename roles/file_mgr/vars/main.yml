@@ -1,6 +1,4 @@
 ---
-file_mgr__all: "{{ ((file_mgr__host | map('combine', {'entry__src': 'host'})) +
-  (file_mgr__group | map('combine', {'entry__src': 'group'})) +
-  (file_mgr__default | map('combine', {'entry__src': 'default'}))) |
-  community.general.json_query('[?not_null(entry__module) && not_null(entry__keep, `true`)==`true` && not_null(entry__skip, `false`)==`false`]') |
-  aybarsm.helper.all_except(['keep__entry', 'skip__entry']) }}"
+file_mgr__all: "{{ {'host': file_mgr__host, 'group': file_mgr__group, 'default': file_mgr__default} | aybarsm.helper.role_items(only=file_mgr__use_only) }}"
+file_mgr__items: "{{ file_mgr__all | selectattr('entry__type', 'in', ['copy', 'file', 'template', 'patch']) }}"
+file_mgr__handlers: "{{ file_mgr__all | selectattr('entry__type', 'in', ['handlers', 'handler']) }}"
