@@ -1,0 +1,6 @@
+---
+- name: "Apply file or directory changes via command module - Index: {{ __fm_itm_ind }}/{{ __fm_hnd_ind }}"
+  become: "{{ __fm_hnd._become | default(true) }}"
+  ansible.builtin.command: "{{ __fm_hnd |
+    aybarsm.helper.only_with(__ansible.modules.ansible_builtin_command.params) }}"
+  when: __fm_hnd._type | default('') == 'command'

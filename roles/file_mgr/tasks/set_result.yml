@@ -6,9 +6,9 @@
     use_regex: true
   register: file_mgr__find_patch_backup_files
   vars:
-    ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if file_mgr__strict_safe and __fm_itm._type | default('') == 'patch' else '' }}"
-    ansible_callback_diy_runner_on_skipped_msg: ''
+    __silent_on_skip: true
   when:
+    - file_mgr__all[__fm_itm_ind]['_result'] is undefined
     - file_mgr__strict_safe
     - __fm_itm._type | default('') == 'patch'
     - misc__ansible_posix_patch is changed
@@ -17,8 +17,7 @@
   ansible.builtin.set_fact:
     file_mgr__all: "{{ file_mgr__all | aybarsm.helper.role_item_result(__fm_itm_ind, item_task) }}"
   vars:
-    ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if file_mgr__all[__fm_itm_ind]['_result'] is undefined else '' }}"
-    ansible_callback_diy_runner_on_skipped_msg: ''
+    __silent_on_skip: true
     patch_combine : "{{ {'backup_file': (file_mgr__find_patch_backup_files.files | map(attribute='path') | sort | last), 'dest': __fm_itm.dest}
       if file_mgr__find_patch_backup_files.files | default([]) | length > 0 else {} }}"
     item_task: "{{ misc__ansible_builtin_copy if __fm_itm._type | default('') == 'copy' else

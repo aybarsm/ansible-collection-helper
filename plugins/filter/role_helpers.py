@@ -45,11 +45,15 @@ def role_item_result(data, key, task):
     data[key]['_result'] = result
 
     return data
-        
+
+def role_copy_item(data):
+    result = data.copy()
+    return result
 
 class FilterModule(object):
     def filters(self):
         return {
             'role_items': role_items,
             'role_item_result': role_item_result,
+            'role_copy_item': role_copy_item
         }

@@ -1,0 +1,5 @@
+---
+- name: "Apply file or directory changes via Debug module - Index: {{ __fm_itm_ind }}/{{ __fm_hnd_ind }}"
+  ansible.builtin.debug: 
+    msg: "{{ __fm_hnd.msg }}"
+  when: __fm_hnd._type | default('') == 'debug'

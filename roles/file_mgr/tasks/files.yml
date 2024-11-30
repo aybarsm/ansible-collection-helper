@@ -6,67 +6,83 @@
         name: aybarsm.helper.misc
         tasks_from: ansible/builtin/file.yml
       vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_itm._mkdir is defined else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
+        __silent_on_skip: true
         misc__item: "{{ __fm_itm._mkdir | combine({'state': 'directory', 'recurse': true, 'path': (__fm_itm.dest | dirname)}) }}"
       when:
-        - __fm_itm._mkdir is defined
+        - __fm_itm._mkdir | default(false)
         - __fm_itm._mkdir | type_debug == 'dict'
+        - __fm_itm._mkdir | keys | length > 0
 
-    - name: "File Manager - Copy - Index: {{ __fm_itm_ind }}"
+    - name: "File Manager - Item Index: {{ __fm_itm_ind }}"
       ansible.builtin.include_role:
         name: aybarsm.helper.misc
-        tasks_from: ansible/builtin/copy.yml
+        tasks_from: "{{ 'ansible/builtin/copy.yml' if __fm_itm._type | default('') == 'copy' else
+          'ansible/builtin/file.yml' if __fm_itm._type | default('') == 'file' else
+          'ansible/builtin/template.yml' if __fm_itm._type | default('') == 'template' else
+          'ansible/posix/patch.yml' }}"
       vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_itm._type | default('') == 'copy' else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
         misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-      when: __fm_itm._type | default('') == 'copy'
 
-    - name: "File Manager - File - Index: {{ __fm_itm_ind }}"
-      ansible.builtin.include_role:
-        name: aybarsm.helper.misc
-        tasks_from: ansible/builtin/file.yml
-      vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_itm._type | default('') == 'file' else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
-        misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-      when: __fm_itm._type | default('') == 'file'
+    # - name: "File Manager - Copy - Index: {{ __fm_itm_ind }}"
+    #   ansible.builtin.include_role:
+    #     name: aybarsm.helper.misc
+    #     tasks_from: ansible/builtin/copy.yml
+    #   vars:
+    #     __silent_on_skip: true
+    #     misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
+    #   when: __fm_itm._type | default('') == 'copy'
 
-    - name: "File Manager - Template - Index: {{ __fm_itm_ind }}"
-      ansible.builtin.include_role:
-        name: aybarsm.helper.misc
-        tasks_from: ansible/builtin/template.yml
-      vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_itm._type | default('') == 'template' else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
-        misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-      when: __fm_itm._type | default('') == 'template'
+    # - name: "File Manager - File - Index: {{ __fm_itm_ind }}"
+    #   ansible.builtin.include_role:
+    #     name: aybarsm.helper.misc
+    #     tasks_from: ansible/builtin/file.yml
+    #   vars:
+    #     __silent_on_skip: true
+    #     misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
+    #   when: __fm_itm._type | default('') == 'file'
+
+    # - name: "File Manager - Template - Index: {{ __fm_itm_ind }}"
+    #   ansible.builtin.include_role:
+    #     name: aybarsm.helper.misc
+    #     tasks_from: ansible/builtin/template.yml
+    #   vars:
+    #     __silent_on_skip: true
+    #     misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
+    #   when: __fm_itm._type | default('') == 'template'
     
-    - name: "File Manager - Patch - Index: {{ __fm_itm_ind }}"
-      ansible.builtin.include_role:
-        name: aybarsm.helper.misc
-        tasks_from: ansible/posix/patch.yml
-      vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_itm._type | default('') == 'patch' else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
-        misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-      when: __fm_itm._type | default('') == 'patch'
+    # - name: "File Manager - Patch - Index: {{ __fm_itm_ind }}"
+    #   ansible.builtin.include_role:
+    #     name: aybarsm.helper.misc
+    #     tasks_from: ansible/posix/patch.yml
+    #   vars:
+    #     __silent_on_skip: true
+    #     misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
+    #   when: __fm_itm._type | default('') == 'patch'
     
     - name: Include Set Results Fact Task
       ansible.builtin.include_tasks: set_result.yml
     
     - name: "Run Handlers - Index: {{ __fm_itm_ind }}"
-      ansible.builtin.include_tasks: handlers.yml
+      ansible.builtin.include_tasks: "handlers/{{ __fm_hnd._type }}.yml"
       loop: "{{ item_handler._actions }}"
       loop_control:
         loop_var: __fm_hnd
         index_var: __fm_hnd_ind
       vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if file_mgr__all[__fm_itm_ind]._result.handler.exec else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
+        __silent_on_skip: true
         item_handler: "{{ file_mgr__all | aybarsm.helper.firstWhere({'_type': 'handler', '_name': __fm_itm['_handler']}) }}"
       when: file_mgr__all[__fm_itm_ind]._result.handler.exec
+    
+    # - name: "Run Handlers - Index: {{ __fm_itm_ind }}"
+    #   ansible.builtin.include_tasks: handlers.yml
+    #   loop: "{{ item_handler._actions }}"
+    #   loop_control:
+    #     loop_var: __fm_hnd
+    #     index_var: __fm_hnd_ind
+    #   vars:
+    #     __silent_on_skip: true
+    #     item_handler: "{{ file_mgr__all | aybarsm.helper.firstWhere({'_type': 'handler', '_name': __fm_itm['_handler']}) }}"
+    #   when: file_mgr__all[__fm_itm_ind]._result.handler.exec
 
   rescue:
     - name: Include Set Results Fact Task
@@ -78,9 +94,9 @@
         dest: "{{ item.dest }}"
         remote_src: true
         backup: false
-      loop: "{{ backup_files | map(attribute='_task') }}"
+      loop: "{{ backup_files | map(attribute='_result.task') }}"
       vars:
-        backup_files: "{{ file_mgr__all | selectattr('_task.backup_file', 'defined') | selectattr('_task.dest', 'defined') }}"
+        backup_files: "{{ file_mgr__all | selectattr('_result.task.backup_file', 'defined') | selectattr('_result.task.dest', 'defined') }}"
       register: file_mgr__restore
       when:
         - file_mgr__strict_safe
@@ -96,7 +112,7 @@
         - file_mgr__strict_safe
         - file_mgr__restore.results | default([]) | length > 0
     
-    - name: Fail the playbook when strict safe is enabled
+    - name: Fail When Strict Safe is Enabled
       ansible.builtin.fail:
         msg: "File Manager - Task Failed - Index: {{ __fm_itm_ind }}"
       when: file_mgr__strict_safe

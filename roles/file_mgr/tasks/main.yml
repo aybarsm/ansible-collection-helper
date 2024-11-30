@@ -7,9 +7,7 @@
     index_var: __fm_itm_ind
   no_log: true
   vars:
-    ansible_callback_diy_playbook_on_task_start_msg: "{{ '' if not file_mgr__no_log else omit }}"
-    ansible_callback_diy_runner_on_skipped_msg: ''
-    ansible_callback_diy_runner_item_on_skipped_msg: ''
+    __silent_on_skip: true
   when:
     - file_mgr__role_enabled | default(false) | bool
     - file_mgr__all | selectattr('_type', 'in', ['copy', 'file', 'template', 'patch']) | length > 0
@@ -23,9 +21,7 @@
     loop_var: __fm_itm
     index_var: __fm_itm_ind
   vars:
-    ansible_callback_diy_playbook_on_task_start_msg: "{{ '' if file_mgr__no_log else omit }}"
-    ansible_callback_diy_runner_on_skipped_msg: ''
-    ansible_callback_diy_runner_item_on_skipped_msg: ''
+    __silent_on_skip: true
   when:
     - file_mgr__role_enabled | default(false) | bool
     - file_mgr__all | selectattr('_type', 'in', ['copy', 'file', 'template', 'patch']) | length > 0

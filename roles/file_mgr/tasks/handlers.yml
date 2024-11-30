@@ -6,8 +6,7 @@
       ansible.builtin.systemd_service: "{{ __fm_hnd |
         aybarsm.helper.only_with(__ansible.modules.ansible_builtin_systemd_service.params) }}"
       vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_hnd._type | default('') == 'systemd_service' else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
+        __silent_on_skip: true
       when: __fm_hnd._type | default('') == 'systemd_service'
 
     - name: "Apply file or directory changes via service module - Index: {{ __fm_itm_ind }}/{{ __fm_hnd_ind }}"
@@ -15,8 +14,7 @@
       ansible.builtin.service: "{{ __fm_hnd |
         aybarsm.helper.only_with(__ansible.modules.ansible_builtin_systemd_service.params) }}"
       vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_hnd._type | default('') == 'service' else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
+        __silent_on_skip: true
       when: __fm_hnd._type | default('') == 'service'
 
     - name: "Apply file or directory changes via command module - Index: {{ __fm_itm_ind }}/{{ __fm_hnd_ind }}"
@@ -24,14 +22,12 @@
       ansible.builtin.command: "{{ __fm_hnd |
         aybarsm.helper.only_with(__ansible.modules.ansible_builtin_command.params) }}"
       vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_hnd._type | default('') == 'command' else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
+        __silent_on_skip: true
       when: __fm_hnd._type | default('') == 'command'
     
     - name: "Apply file or directory changes via Debug module - Index: {{ __fm_itm_ind }}/{{ __fm_hnd_ind }}"
       ansible.builtin.debug: 
         msg: "{{ __fm_hnd.msg }}"
       vars:
-        ansible_callback_diy_playbook_on_task_start_msg: "{{ omit if __fm_hnd._type | default('') == 'debug' else '' }}"
-        ansible_callback_diy_runner_on_skipped_msg: ''
+        __silent_on_skip: true
       when: __fm_hnd._type | default('') == 'debug'
