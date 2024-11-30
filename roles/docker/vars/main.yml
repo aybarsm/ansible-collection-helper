@@ -1,13 +1,13 @@
 ---
-docker__all: "{{ {'host': docker__host, 'group': docker__group, 'default': docker__default} | aybarsm.helper.role_items(only=docker__use_only) }}"
+docker__all: "{{ {'host': docker__host, 'group': docker__group, 'default': docker__default} | aybarsm.helper.role_vars(only=docker__use_only) }}"
 
-docker_daemon_options: "{{ docker__all | selectattr('entry__type', 'eq', 'daemon_config') |
+docker_daemon_options: "{{ docker__all | selectattr('_type', 'eq', 'daemon_config') |
   default([{}]) | reverse |
   combine(recursive=(docker__daemon_config_merge_recursive | bool), list_merge=docker__daemon_config_merge_list) |
-  aybarsm.helper.all_except(['entry__type'])
+  aybarsm.helper.all_except(['_type'])
   if ((docker__role_enabled | default(false) | bool) and (docker__manage_daemon_config | default(false) | bool)) else {} }}"
 
-docker__network: "{{ docker__all | reverse | selectattr('entry__type', 'eq', 'network') | reverse |
+docker__network: "{{ docker__all | reverse | selectattr('_type', 'eq', 'network') | reverse |
   aybarsm.helper.replace_aliases(__ansible.modules.community_docker_docker_network.aliases) |
   selectattr('name', 'defined') | community.general.lists_mergeby('name', recursive=true, list_merge='prepend') |
   unique(attribute='name') }}"

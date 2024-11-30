@@ -1,3 +1,4 @@
+#TODO: New callback plugin to reduce output verbosity
 # allow_duplicates: true
 dependencies:
   - role: aybarsm.helper.ansible

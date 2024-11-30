@@ -5,11 +5,11 @@ __consul__role_path: "{{ role_path | default('ZORT') }}"
 __consul__auto_build: "{{ lookup('ansible.builtin.template', consul__certs_auto_build_template) if consul__certs_auto_build else {} }}"
 
 consul__all: "{{ ((__consul__auto_build.certs | default([])) + consul__host + consul__group + consul__default) |
-  community.general.json_query('[?not_null(entry__type) && not_null(entry__keep, `true`)==`true` && not_null(entry__skip, `false`)==`false`]') |
-  aybarsm.helper.all_except(['entry__keep', 'entry__skip']) }}"
+  community.general.json_query('[?not_null(_type)&& not_null(_keep,`true`)==`true` && not_null(_skip,`false`)==`false`]') |
+  aybarsm.helper.all_except(['_keep', '_skip']) }}"
 
 consul__certs: "{{ consul__all |
-  community.general.json_query('[?entry__type==`cert` && not_null(dest) && (not_null(content) || not_null(src))]') |
+  community.general.json_query('[?_type==`cert`&& not_null(dest) && (not_null(content) || not_null(src))]') |
   unique(attribute='dest') }}"
 
 consul__config: "{{ (__consul__auto_build.config | default({})) |

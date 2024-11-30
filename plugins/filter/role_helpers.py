@@ -13,33 +13,37 @@ def role_items(data, only = []):
             continue
 
         for item in value:
-            if ('entry__type' not in item) or ('entry__keep' in item and item['entry__keep'] == False) or ('entry__skip' in item and item['entry__skip'] == True):
+            if ('_type' not in item) or ('_keep' in item and item['_keep'] == False) or ('_skip' in item and item['_skip'] == True):
                 continue
             
             result.append(item)
     
     return result
 
-def role_item_result(data, key, isChanged, handlers = []):
+def role_item_result(data, key, task):
     Validate.require('listofdicts', data)
 
-    data[key]['entry__changed'] = isChanged
-    data[key]['entry__exec_handlers'] = False
+    result = {
+        'task': task,
+        'handler': {
+            'exec': False
+        }
+    }
 
-    handlerName = data[key].get('entry__handlers', '')
-    handler = Dict.firstWhere(handlers, {'name': handlerName}) if Validate.isString(handlerName) and handlerName != '' else None
+    handlerName = Dict.data_get(data[key], '_handler', '')
+    handler = Dict.firstWhere(data, {'_type': 'handler', '_name': handlerName}) if Validate.isString(handlerName) and handlerName != '' else None
 
-    if handler is not None:
-        if handler.get('condition') == 'always' and isChanged:
-            data[key]['entry__exec_handlers'] = True
-            return data
+    if handler is not None and Dict.has_all(handler, ['_when', '_actions']) and Validate.isList(handler['_actions']) and len(handler['_actions']) > 0:
+        if Dict.data_get(handler, '_when') == 'always' and Dict.data_get(result, 'task.changed', False):
+            Dict.data_set(result, 'handler.exec', True)
         else:
-            dependencies = Dict.where(data, {'entry__handlers': handlerName})
-        
-        execAll = handler.get('condition') == 'all' and Dict.allContains(dependencies, {'entry__changed': True})
-        execAny = handler.get('condition') == 'any' and Dict.contains(dependencies, {'entry__changed': True})
-        data[key]['entry__exec_handlers'] = (execAll or execAny) and dependencies[-1] == data[key]
-        
+            dependencies = Dict.where(data, {'_handler': handlerName})
+            execAll = handler.get('_when') == 'all' and Dict.allContains(dependencies, {'_result.task.changed': True})
+            execAny = handler.get('_when') == 'any' and Dict.contains(dependencies, {'_result.task.changed': True})
+            Dict.data_set(result, 'handler.exec', (execAll or execAny) and dependencies[-1] == data[key])
+    
+    data[key]['_result'] = result
+
     return data
         
 

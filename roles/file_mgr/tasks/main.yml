@@ -1,11 +1,33 @@
 ---
-- name: Include file and directory management tasks
+- name: Include File and Directory Management Tasks (NO LOG)
   ansible.builtin.include_tasks: files.yml
-  loop: "{{ file_mgr__items }}"
+  loop: "{{ file_mgr__all }}"
   loop_control:
     loop_var: __fm_itm
     index_var: __fm_itm_ind
-  no_log: "{{ file_mgr__no_log }}"
+  no_log: true
+  vars:
+    ansible_callback_diy_playbook_on_task_start_msg: "{{ '' if not file_mgr__no_log else omit }}"
+    ansible_callback_diy_runner_on_skipped_msg: ''
+    ansible_callback_diy_runner_item_on_skipped_msg: ''
   when:
     - file_mgr__role_enabled | default(false) | bool
-    - file_mgr__items | length > 0
+    - file_mgr__all | selectattr('_type', 'in', ['copy', 'file', 'template', 'patch']) | length > 0
+    - file_mgr__no_log
+    - __fm_itm._type in ['copy', 'file', 'template', 'patch']
+
+- name: Include File and Directory Management Tasks (LOG)
+  ansible.builtin.include_tasks: files.yml
+  loop: "{{ file_mgr__all }}"
+  loop_control:
+    loop_var: __fm_itm
+    index_var: __fm_itm_ind
+  vars:
+    ansible_callback_diy_playbook_on_task_start_msg: "{{ '' if file_mgr__no_log else omit }}"
+    ansible_callback_diy_runner_on_skipped_msg: ''
+    ansible_callback_diy_runner_item_on_skipped_msg: ''
+  when:
+    - file_mgr__role_enabled | default(false) | bool
+    - file_mgr__all | selectattr('_type', 'in', ['copy', 'file', 'template', 'patch']) | length > 0
+    - not file_mgr__no_log
+    - __fm_itm._type in ['copy', 'file', 'template', 'patch']

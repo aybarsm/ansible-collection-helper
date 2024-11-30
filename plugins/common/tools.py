@@ -241,6 +241,25 @@ class Dict:
             newDict.update(arg)
 
         return newDict
+    
+    @staticmethod
+    def data_get(data, key, default=None):
+        keys = key.split('.')
+        for k in keys:
+            if isinstance(data, dict) and k in data:
+                data = data[k]
+            else:
+                return default
+        return data
+    
+    @staticmethod
+    def data_set(data, key, value):
+        keys = key.split('.')
+        for k in keys[:-1]:
+            if k not in data or not isinstance(data[k], dict):
+                data[k] = {}
+            data = data[k]
+        data[keys[-1]] = value
 
     @staticmethod
     def set_attr(dict_data, attribute, value, overwrite=False, deleteWhenNone=False):
@@ -263,14 +282,17 @@ class Dict:
         return {key: value for key, value in dict_data.items() if callback(key, value)}
     
     @staticmethod
-    def _contains_flex(data, search, isAny = True):
-        def has_item(item, lookup):
-            return all(item.get(k) == v for k, v in lookup.items())
-        
+    def has_item(item, lookup, isAny = True):
+        result = {Dict.data_get(item, k) == v for k, v in lookup.items()}
+        return any(result) if isAny else all(result)
+    
+    @staticmethod
+    def _contains_flex(data, search, isAny = True):        
         if Validate.isListOfDicts(data):
-            return any(has_item(item, search) for item in data) if isAny else all(has_item(item, search) for item in data)
+            result = {Dict.has_item(item, search, False) for item in data}
+            return any(result) if isAny else all(result)
         else:
-            return has_item(data, search)
+            return Dict.has_item(data, search, isAny)
     
     @staticmethod
     def contains(data, search):
@@ -285,7 +307,7 @@ class Dict:
         isDataDict = Validate.isDict(data)
         data = Convert.wrapList(data)
 
-        result = [item for item in data if Dict.contains(item, search)]
+        result = [item for item in data if Dict.has_item(item, search, False)]
 
         if isDataDict:
             return result[0] if result else {}
@@ -298,27 +320,29 @@ class Dict:
         return result[0] if result else default
 
     @staticmethod
-    def only_with(dict_data, attributes):
-        return Dict.filter(dict_data, lambda key, value: key in attributes)
+    def only_with(data, attributes):
+        return Dict.filter(data, lambda key, value: key in attributes)
 
     @staticmethod
-    def all_except(dict_data, attributes):
-        return Dict.filter(dict_data, lambda key, value: key not in attributes)
+    def all_except(data, attributes):
+        return Dict.filter(data, lambda key, value: key not in attributes)
 
     @staticmethod
-    def has_any_or_all(hasAll, dict_data, attributes):
-        if isinstance(attributes, str):
+    def _has_any_or_all(data, attributes, isAny = True):
+        if Validate.isString(attributes):
             attributes = [attributes]
 
-        return all(attr in dict_data for attr in attributes) if hasAll else any(attr in dict_data for attr in attributes)
+        result = {attr in data for attr in attributes}
+
+        return any(result) if isAny else all(result)
 
     @staticmethod
-    def has_all(dict_data, attributes):
-        return Dict.has_any_or_all(True, dict_data, attributes)
+    def has_any(data, attributes):
+        return Dict._has_any_or_all(data, attributes)
 
     @staticmethod
-    def has_any(dict_data, attributes):
-        return Dict.has_any_or_all(False, dict_data, attributes)
+    def has_all(data, attributes):
+        return Dict._has_any_or_all(data, attributes, False)
 
     @staticmethod
     def when(jinja, dict_data, when, logic):

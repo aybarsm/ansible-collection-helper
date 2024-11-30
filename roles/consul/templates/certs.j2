@@ -21,4 +21,4 @@
 {%      set config = config | combine({key: cert_dest}) %}
 {%  endfor %}
 {% endif %}
-{{ {'config': {'tls': {'defaults': config}}, 'certs': (certs | map('combine', {'entry__type': 'cert'}))} }}
+{{ {'config': {'tls': {'defaults': config}}, 'certs': (certs | map('combine', {'_type': 'cert'}))} }}

@@ -1,7 +1,14 @@
 ---
 file_mgr__role_enabled: false
 
+file_mgr__strict_safe: false
 file_mgr__no_log: true
+file_mgr__tasks:
+  file: file.yml
+  copy: copy.yml
+  template: template.yml
+  patch: patch.yml
+
 file_mgr__use_only: ['host', 'group', 'default']
 
 file_mgr__host: []

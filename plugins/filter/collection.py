@@ -279,7 +279,7 @@ def combine_last(data, *terms, **kwargs):
 
     Example Usage: "{{ data | combine_last(dict1, dict2, dict3) }}"
     """
-    return combine_key(data, -1, *terms, **kwargs)
+    return combine_key(data, -1, *terms, **kwargs) if len(data) > 0 else data
 
 def combine_first(data, *terms, **kwargs):
     """
@@ -287,7 +287,7 @@ def combine_first(data, *terms, **kwargs):
 
     Example Usage: "{{ data | combine_first(dict1, dict2, dict3) }}"
     """
-    return combine_key(data, 0, *terms, **kwargs)
+    return combine_key(data, 0, *terms, **kwargs) if len(data) > 0 else data
 
 def update_key(data, key, value):
     """
@@ -303,6 +303,50 @@ def update_key(data, key, value):
     data[key] = value
 
     return data
+
+def data_get(data, path, default=None):
+    """
+    Get a value from a dictionary by path.
+
+    Example Usage: "{{ data | aybarsm.helper.data_get('key1.key2') }}"
+    """
+    Validate.dict(data, 'data')
+
+    return Dict.data_get(data, path, default)
+
+def data_set(data, path, value):
+    """
+    Set a value in a dictionary by path.
+
+    Example Usage: "{{ data | aybarsm.helper.data_get('key1.key2') }}"
+    """
+    Validate.dict(data, 'data')
+
+    Dict.data_set(data, path, value)
+
+    return data
+
+def where(data, search):
+    """
+    Filter the list of dictionaries by the provided dictionary.
+
+    Example Usage: "{{ data | aybarsm.helper_where({'key': 'value'}) }}"
+    """
+    Validate.list_of_dicts(data, 'data')
+    Validate.dict(search, 'search')
+
+    return Dict.where(data, search)
+
+def firstWhere(data, search):
+    """
+    Get the first dictionary that matches the provided dictionary.
+
+    Example Usage: "{{ data | aybarsm.helper_firstWhere({'key': 'value'}) }}"
+    """
+    Validate.list_of_dicts(data, 'data')
+    Validate.dict(search, 'search')
+
+    return Dict.firstWhere(data, search)
 
 class FilterModule(object):
     def filters(self):
@@ -321,4 +365,8 @@ class FilterModule(object):
             'combine_last': combine_last,
             'combine_first': combine_first,
             'update_key': update_key,
+            'data_get': data_get,
+            'data_set': data_set,
+            'where': where,
+            'firstWhere': firstWhere,
         }

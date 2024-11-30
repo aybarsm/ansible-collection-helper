@@ -1,4 +1,4 @@
 ---
 file_mgr__all: "{{ {'host': file_mgr__host, 'group': file_mgr__group, 'default': file_mgr__default} | aybarsm.helper.role_items(only=file_mgr__use_only) }}"
-file_mgr__items: "{{ file_mgr__all | selectattr('entry__type', 'in', ['copy', 'file', 'template', 'patch']) }}"
-file_mgr__handlers: "{{ file_mgr__all | selectattr('entry__type', 'in', ['handlers', 'handler']) }}"
+# file_mgr__items: "{{ file_mgr__all | selectattr('_type', 'in', ['copy', 'file', 'template', 'patch']) }}"
+# file_mgr__handlers: "{{ file_mgr__all | selectattr('_type', 'in', ['handlers', 'handler']) }}"
