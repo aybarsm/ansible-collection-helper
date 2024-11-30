@@ -22,42 +22,6 @@
           'ansible/posix/patch.yml' }}"
       vars:
         misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-
-    # - name: "File Manager - Copy - Index: {{ __fm_itm_ind }}"
-    #   ansible.builtin.include_role:
-    #     name: aybarsm.helper.misc
-    #     tasks_from: ansible/builtin/copy.yml
-    #   vars:
-    #     __silent_on_skip: true
-    #     misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-    #   when: __fm_itm._type | default('') == 'copy'
-
-    # - name: "File Manager - File - Index: {{ __fm_itm_ind }}"
-    #   ansible.builtin.include_role:
-    #     name: aybarsm.helper.misc
-    #     tasks_from: ansible/builtin/file.yml
-    #   vars:
-    #     __silent_on_skip: true
-    #     misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-    #   when: __fm_itm._type | default('') == 'file'
-
-    # - name: "File Manager - Template - Index: {{ __fm_itm_ind }}"
-    #   ansible.builtin.include_role:
-    #     name: aybarsm.helper.misc
-    #     tasks_from: ansible/builtin/template.yml
-    #   vars:
-    #     __silent_on_skip: true
-    #     misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-    #   when: __fm_itm._type | default('') == 'template'
-    
-    # - name: "File Manager - Patch - Index: {{ __fm_itm_ind }}"
-    #   ansible.builtin.include_role:
-    #     name: aybarsm.helper.misc
-    #     tasks_from: ansible/posix/patch.yml
-    #   vars:
-    #     __silent_on_skip: true
-    #     misc__item: "{{ __fm_itm | combine({'backup': (true if file_mgr__strict_safe else (__fm_itm.backup | default(omit)))}) }}"
-    #   when: __fm_itm._type | default('') == 'patch'
     
     - name: Include Set Results Fact Task
       ansible.builtin.include_tasks: set_result.yml
@@ -72,18 +36,7 @@
         __silent_on_skip: true
         item_handler: "{{ file_mgr__all | aybarsm.helper.firstWhere({'_type': 'handler', '_name': __fm_itm['_handler']}) }}"
       when: file_mgr__all[__fm_itm_ind]._result.handler.exec
-    
-    # - name: "Run Handlers - Index: {{ __fm_itm_ind }}"
-    #   ansible.builtin.include_tasks: handlers.yml
-    #   loop: "{{ item_handler._actions }}"
-    #   loop_control:
-    #     loop_var: __fm_hnd
-    #     index_var: __fm_hnd_ind
-    #   vars:
-    #     __silent_on_skip: true
-    #     item_handler: "{{ file_mgr__all | aybarsm.helper.firstWhere({'_type': 'handler', '_name': __fm_itm['_handler']}) }}"
-    #   when: file_mgr__all[__fm_itm_ind]._result.handler.exec
-
+      
   rescue:
     - name: Include Set Results Fact Task
       ansible.builtin.include_tasks: set_result.yml
